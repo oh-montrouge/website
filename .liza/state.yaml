@@ -1,0 +1,260 @@
+version: 1
+pipeline_version: 2
+goal:
+    id: goal-1776004187
+    description: OHM website - V1
+    spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+    created: 2026-04-12T14:29:47.46563165Z
+    status: IN_PROGRESS
+    alignment_history:
+        - timestamp: 2026-04-12T14:29:47.46563165Z
+          event: initialization
+          summary: Initial goal. No tasks defined yet.
+        - timestamp: 2026-04-12T14:38:13.820525312Z
+          event: planning
+          summary: 'Added task ep-1: Phase 1: Epic planning — Core authentication and account lifecycle'
+        - timestamp: 2026-04-12T14:38:13.828486069Z
+          event: planning
+          summary: 'Added task ep-2: Phase 2: Epic planning — Musician records and season management'
+        - timestamp: 2026-04-12T14:38:13.833249224Z
+          event: planning
+          summary: 'Added task ep-3: Phase 3: Epic planning — Fee payments and event management'
+        - timestamp: 2026-04-12T14:38:13.838248731Z
+          event: planning
+          summary: 'Added task ep-4: Phase 4: Epic planning — RSVPs, GDPR compliance, and public features'
+tasks:
+    - id: ep-1
+      type: coding
+      role_pair: epic-planning-pair
+      description: 'Phase 1: Epic planning — Core authentication and account lifecycle'
+      status: MERGED
+      priority: 1
+      assigned_to: epic-planner-1
+      base_commit: 1d78170238c2a2f4650debc955f38c2f91e7397c
+      iteration: 2
+      output:
+        - desc: Admin can invite a new musician to the platform via a one-time link; the musician follows it to complete account setup and gain access.
+          done_when: 'All story acceptance criteria pass for CAP-001: an admin can view the invite link for a pending account and regenerate it; a musician can open the invite link, see the setup form, submit it, and have the account transition to active; expired and already-used invite links display an informative message.'
+          scope: 'Invite token display in admin UI, invite link regeneration (invalidates existing token), invite form (password + privacy notice acknowledgement + phone/address consent checkbox), atomic activation (pending→active, password set, consent flag set, token marked used, musician logged in), expired/used link handling. Excludes: musician record field entry (ep-2 scope), phone/address consent implications (ep-4 scope), any email sending infrastructure.'
+          spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+          plan_ref: specs/plans/EP-001.md#capability-cap-001---account-invitation-and-activation
+          depends_on:
+            - "1"
+        - desc: Musicians and admins can log in with their email and password, maintain a persistent session across requests, and log out, with unauthorized access to protected routes blocked.
+          done_when: 'All story acceptance criteria pass for CAP-002: an active account can log in and a session is created; pending and anonymized accounts are rejected at login; unauthenticated access to a protected route redirects to the login page; logout destroys the session; the bootstrap CLI creates the first admin account; the emergency recovery CLI resets admin credentials.'
+          scope: 'Login form, session creation (server-side, 7-day rolling), session cookie flags (HttpOnly/Secure/SameSite=Strict), logout, protected-route middleware (RequireActiveAccount), bootstrap CLI for first admin, emergency admin recovery CLI. Excludes: session invalidation on anonymization (ep-4 scope), admin role verification on admin routes (EP-002 CAP-001).'
+          spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+          plan_ref: specs/plans/EP-001.md#capability-cap-002---login-logout-and-session-management
+        - desc: Admin can generate a one-time password-reset link for an active account; the musician follows it to set a new password.
+          done_when: 'All story acceptance criteria pass for CAP-003: an admin can generate and regenerate a password-reset link for an active account; a musician can follow the reset link, submit a new password, and authenticate with it; expired and used reset links display an informative message; password reset is blocked for pending and anonymized accounts.'
+          scope: 'Password-reset token generation and display in admin UI, reset link regeneration (invalidates existing token), password reset form, password hash update (Argon2id), 7-day token expiry, used/expired link handling, state restriction (active accounts only). Excludes: self-service reset (no email infrastructure), emergency admin recovery CLI (EP-001 CAP-002).'
+          spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+          plan_ref: specs/plans/EP-001.md#capability-cap-003---password-reset
+          depends_on:
+            - "1"
+        - desc: Admin can grant or revoke the admin role on any account, with the system blocking any operation that would leave the association without a remaining active admin.
+          done_when: 'All story acceptance criteria pass for CAP-001: an admin can grant the admin role to any account (pending or active); an admin can revoke the admin role; the system rejects revocation when the target is the sole remaining active admin with an informative message; admin role is re-verified from the database on every request to admin routes.'
+          scope: 'Grant admin role to any account (pending or active), revoke admin role, last-admin protection check for role revocation (counts only active accounts holding the admin role), per-request database role verification for all admin routes (RequireAdmin middleware). Excludes: last-admin protection during account anonymization (ep-4 scope), last-admin protection during pending account deletion (ep-2 scope), additional role types beyond admin.'
+          spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+          plan_ref: specs/plans/EP-002.md#capability-cap-001---admin-role-management-and-last-admin-protection
+          depends_on:
+            - "1"
+        - desc: Authenticated users see a "Partitions" menu item in the application navigation linking to the configured Google Drive sheet music URL; the item is hidden when no URL is configured.
+          done_when: 'All story acceptance criteria pass for CAP-002: authenticated users see the Partitions menu item when SHEET_MUSIC_URL is set; the menu item is absent when SHEET_MUSIC_URL is unset; unauthenticated users do not see the menu item.'
+          scope: 'Partitions navigation menu item visibility conditional on SHEET_MUSIC_URL environment variable, menu item links to configured Google Drive URL, hidden for unauthenticated users. Excludes: admin UI for configuring the URL, sheet music file hosting/search, application-level access control for files.'
+          spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+          plan_ref: specs/plans/EP-002.md#capability-cap-002---sheet-music-access
+          depends_on:
+            - "1"
+      review_cycles_current: 1
+      review_cycles_total: 1
+      review_commit: 0ac52fbe769b7be14c2d757f62998bd3f3b13b63
+      approved_by: epic-plan-reviewer-1
+      approvals:
+        - agent: epic-plan-reviewer-1
+          provider: claude
+          timestamp: 2026-04-12T14:55:51.647094504Z
+      merge_commit: 0ac52fbe769b7be14c2d757f62998bd3f3b13b63
+      lease_expires: 2026-04-12T15:25:34.04720896Z
+      spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+      done_when: Epic stories for core authentication (invite link generation/expiry, password reset links/expiry, login/logout, session management) and account lifecycle (pending/active/anonymized states, admin role grant/revoke, last-admin protection, sheet music Google Drive link access) are complete, non-overlapping with other phases, consistent with functional-specs/ and technical-specs/, reviewable, and submitted for review
+      scope: 'Planning only: authentication system, invite link generation and 7-day expiry, password reset links and 7-day expiry, login/logout, account state transitions (pending→active→anonymized), admin role management, last-admin protection invariant, sheet music Google Drive link display. No implementation.'
+      attempt: 1
+      handoff_events:
+        - timestamp: 2026-04-12T14:47:31.201251222Z
+          agent: epic-planner-1
+          trigger: submission
+        - timestamp: 2026-04-12T14:54:30.816030478Z
+          agent: epic-planner-1
+          trigger: submission
+        - timestamp: 2026-04-12T16:55:57.40689972+02:00
+          agent: epic-plan-reviewer-1
+          trigger: completion
+      created: 2026-04-12T14:38:13.820525312Z
+      history:
+        - time: 2026-04-12T14:38:13.906337694Z
+          event: claimed
+          agent: epic-planner-1
+        - time: 2026-04-12T14:40:42.743754463Z
+          event: pre_execution_checkpoint
+          agent: epic-planner-1
+          assumptions:
+            - 'DERIVED: specs/plans/ directory does not yet exist (glob returned no files); it will be created by Write.'
+            - 'DERIVED: sibling epics (ep-2 through ep-4) are DRAFT_EPIC_PLAN and have not yet produced plan documents, so no consistency check against adjacent epic files is needed — scope boundaries are read from blackboard task definitions only.'
+          files_to_modify:
+            - specs/plans/EP-001.md
+            - specs/plans/EP-002.md
+          intent: 'Produce two epic documents for Phase 1 scope: EP-001 (Core Authentication Flows) covering invite link generation/account activation, login/logout/session management, and password reset; EP-002 (Account Privileges and Sheet Music Access) covering admin role management with last-admin protection and sheet music menu display. Write to specs/plans/ in the worktree, persist 5 capability entries via liza_set_task_output, and submit for review.'
+          tdd_not_required: This is a planning-only task. No implementation files or test files are produced — the deliverables are epic markdown documents and structured task output entries.
+          validation_plan: 1. Read both EP-001.md and EP-002.md from the worktree to confirm all 5 capabilities are present with correct section anchors. 2. Verify task output[] has 5 entries, each with desc, done_when, scope, spec_ref, and plan_ref fields populated. 3. Confirm plan_ref anchors match the capability heading slugs in the documents. 4. Run git -C worktree status to confirm both files are staged. 5. Self-review checklist passes (falsifiable completion criteria, no story-level detail, out-of-scope named, personas specific).
+        - time: 2026-04-12T14:47:31.201251222Z
+          event: submitted_for_review
+          agent: epic-planner-1
+        - time: 2026-04-12T14:51:35.330720289Z
+          event: rejected
+          agent: epic-plan-reviewer-1
+          reason: |-
+            ---
+            Blockers: 1
+            - specs/plans/EP-002.md lines 86, 91 — CAP-001 restricts admin role grant to `active` accounts only, contradicting spec and the epic's own assumption
+              Why it matters: The vision states "Admin can grant or revoke the admin role on **any** account." The information model places no status restriction on role assignment. The epic's own ASM-000-2 (HIGH confidence) states "A pending account can hold the admin role (set by an admin before the account is activated)." The last-admin protection spec explicitly lists "Deleting a pending admin account" as a blocked operation, which is only meaningful if pending accounts can hold the admin role. The capability description ("an admin can grant the admin role to an active account") and the sole grant story ("Admin grants the admin role to an active musician account") together ensure a Story Writer will implement grant for active accounts only — silently skipping the pending account scenario. ASM-000-2 becomes unreachable: if grant is restricted to active accounts only, no pending account can ever hold the admin role, which makes the assumption self-contradictory.
+              Suggestion: Change "an admin can grant the admin role to an active account" to "an admin can grant the admin role to any account (pending or active)" in the capability description. Add a story document: "Admin grants the admin role to a pending musician account." Update the output[] DoneWhen for EP-002 CAP-001 to reflect any-account grant. The revoke and last-admin protection stories are unaffected.
+
+            Concerns: 2
+            - specs/plans/EP-001.md (CAP-001 References) — Route path inconsistency between two referenced specs: specs/technical-specs/01-auth-and-security.md lists `/invite/:token` while specs/technical-specs/04-routing.md lists `/invitation/{token}`. The epic correctly follows the routing spec's `/invitation/{token}`, but Story Writers consulting both referenced sources will encounter conflicting paths. Suggest adding a note in the CAP-001 References or an Open Question flagging that the auth-security spec's Public Routes table uses a different token path than the routing spec; the routing spec is authoritative.
+            - output[] DependsOn values — All non-null DependsOn entries show ["1"] which does not map to any valid capability ID, plan_ref, or output index. EP-001 CAP-002 shows null DependsOn despite the epic stating it depends on CAP-001. These values are inconsistent with the dependency relationships declared in the epic documents and could confuse downstream agents that use the dependency graph for ordering. Suggest correcting DependsOn to use the capability's plan_ref path or a consistent identifier matching the epic section anchors.
+
+            Overall: Both epics are well-structured — personas are clear, completion criteria are falsifiable, scope boundaries are clean, and assumptions trace to source material. One material blocker must be resolved in EP-002 CAP-001: the "active accounts only" restriction on admin role grant contradicts both the vision spec and the epic's own HIGH-confidence assumption ASM-000-2.
+            ---
+        - time: 2026-04-12T14:51:35.391091265Z
+          event: reclaimed_after_rejection
+          agent: epic-planner-1
+        - time: 2026-04-12T14:52:30.003964211Z
+          event: pre_execution_checkpoint
+          agent: epic-planner-1
+          files_to_modify:
+            - specs/plans/EP-001.md
+            - specs/plans/EP-002.md
+          intent: 'Fix three reviewer issues: (1) EP-002 CAP-001 — change capability description from ''active account only'' to ''any account (pending or active)'' for admin role grant, add story for granting to pending accounts; (2) EP-001 CAP-001 References — add Open Question flagging the /invite/:token vs /invitation/{token} inconsistency between auth-security spec and routing spec; (3) Remove inaccurate CAP-002 depends-on-CAP-001 entry from the epic and update all output[] depends_on to use plan_ref anchors. Update output[] done_when for EP-002 CAP-001 to reflect any-account grant.'
+          tdd_not_required: Planning-only task. No implementation files.
+          validation_plan: 1. Grep EP-002.md for 'any account (pending or active)' to confirm description is fixed. 2. Confirm story document row 'Admin grants the admin role to a pending musician account' exists in EP-002 CAP-001. 3. Grep EP-001.md for the /invite/:token inconsistency note. 4. Grep EP-001.md for 'Depends on' in CAP-002 — should no longer list CAP-001. 5. Verify output[] has 5 entries with plan_ref-based depends_on and updated EP-002 CAP-001 done_when.
+        - time: 2026-04-12T14:54:30.816030478Z
+          event: submitted_for_review
+          agent: epic-planner-1
+        - time: 2026-04-12T14:55:51.647094504Z
+          event: approved
+          agent: epic-plan-reviewer-1
+        - time: 2026-04-12T16:55:57.406900613+02:00
+          event: merged
+          agent: epic-plan-reviewer-1
+          commit: 0ac52fbe769b7be14c2d757f62998bd3f3b13b63
+          tests_ran: false
+    - id: ep-2
+      type: coding
+      role_pair: epic-planning-pair
+      description: 'Phase 2: Epic planning — Musician records and season management'
+      status: EPIC_PLANNING
+      priority: 2
+      assigned_to: epic-planner-1
+      worktree: .worktrees/ep-2
+      base_commit: 0ac52fbe769b7be14c2d757f62998bd3f3b13b63
+      iteration: 1
+      lease_expires: 2026-04-12T15:27:34.064821315Z
+      spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+      done_when: Epic stories for musician record management (all fields, birth date parental consent check, admin create/edit/view, pending account deletion, consent withdrawal, data retention review list) and season management (create season, configurable date range, current-season designation, one-current-at-all-times invariant) are complete, non-overlapping with other phases, consistent with functional-specs/ and technical-specs/, reviewable, and submitted for review
+      scope: 'Planning only: musician record fields (name, email, main instrument from controlled list, birth date, parental consent URI, phone/address post-consent), pending account deletion, admin consent withdrawal on behalf of musician, data retention elapsed report, season CRUD, current season designation and its immutability without replacement. No implementation.'
+      attempt: 1
+      depends_on:
+        - ep-1
+      created: 2026-04-12T14:38:13.828486069Z
+      history:
+        - time: 2026-04-12T14:55:58.321272565Z
+          event: claimed
+          agent: epic-planner-1
+    - id: ep-3
+      type: coding
+      role_pair: epic-planning-pair
+      description: 'Phase 3: Epic planning — Fee payments and event management'
+      status: DRAFT_EPIC_PLAN
+      priority: 3
+      spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+      done_when: Epic stories for fee payment management (single payment per musician per season, payment types, amount, date, optional comment, CRUD, derived first inscription date) and event management (event CRUD, event types concert/rehearsal/other, EAV custom fields for other-type events, event type-change rules) are complete, non-overlapping with other phases, consistent with functional-specs/ and technical-specs/, reviewable, and submitted for review
+      scope: 'Planning only: fee payment records per season (amount, date, type: chèque/espèces/virement bancaire, optional comment), one payment per musician per season constraint, first inscription date derivation from earliest fee payment, event creation/edit/delete, event types and their rules, custom EAV fields for other-type events. No implementation.'
+      depends_on:
+        - ep-2
+      created: 2026-04-12T14:38:13.833249224Z
+      history: []
+    - id: ep-4
+      type: coding
+      role_pair: epic-planning-pair
+      description: 'Phase 4: Epic planning — RSVPs, GDPR compliance, and public features'
+      status: DRAFT_EPIC_PLAN
+      priority: 4
+      spec_ref: /home/henry/workspace/ohm-website/specs/goals/vision.md
+      done_when: Epic stories for RSVP system (yes/no/maybe/unanswered states, transitions, concert instrument selection, RSVP list visibility for all authenticated users, new-member RSVP initialization for future events), GDPR compliance features (account anonymization flow, phone/address consent collection on invite form, consent withdrawal, GDPR Art.18 processing restriction flag), and public features (static homepage, WCAG A accessibility) are complete, non-overlapping with other phases, consistent with functional-specs/ and technical-specs/, reviewable, and submitted for review
+      scope: 'Planning only: RSVP lifecycle and state transitions, concert instrument selection (main instrument pre-selected), RSVP list visibility (yes/no/maybe/unanswered; concert instrument shown for yes RSVPs), new-member RSVP initialization for not-yet-occurred events, account anonymization (erase personal fields, retain instrument and anonymized payment records with opaque token), phone/address consent collection on invite form, admin consent withdrawal, GDPR Art.18 processing restriction flag (storage/display only in V1), public homepage static content. No implementation.'
+      depends_on:
+        - ep-3
+      created: 2026-04-12T14:38:13.838248731Z
+      history: []
+agents: {}
+discovered: []
+human_notes:
+    - timestamp: 2026-04-12T14:58:02.687913304Z
+      message: 'Agent epic-planner-1 deleted: terminated via TUI'
+      for: epic-planner-1
+    - timestamp: 2026-04-12T15:04:19.585696118Z
+      message: 'Agent epic-plan-reviewer-1 deleted: terminated via TUI'
+      for: epic-plan-reviewer-1
+    - timestamp: 2026-04-12T15:04:24.329758498Z
+      message: 'Agent orchestrator-1 deleted: terminated via TUI'
+      for: orchestrator-1
+spec_changes: []
+anomalies: []
+sprint:
+    id: sprint-1
+    number: 1
+    goal_ref: goal-1776004187
+    scope:
+        planned:
+            - ep-1
+            - ep-2
+            - ep-3
+            - ep-4
+        stretch: []
+    timeline:
+        started: 2026-04-12T14:29:47.46563165Z
+        deadline: 0001-01-01T00:00:00Z
+        checkpoint_at: 2026-04-12T16:43:43.942211716+02:00
+    status: IN_PROGRESS
+    metrics:
+        tasks_done: 1
+        tasks_in_progress: 0
+        tasks_blocked: 0
+        iterations_total: 0
+        review_cycles_total: 1
+        review_verdict_approvals: 1
+        review_verdict_rejections: 1
+        review_verdict_count: 2
+        review_verdict_approval_rate_percent: 50
+        task_submitted_for_review_count: 1
+        task_outcome_approval_rate_percent: 100
+circuit_breaker:
+    last_check: 0001-01-01T00:00:00Z
+    status: OK
+    history: []
+config:
+    max_coder_iterations: 10
+    max_review_cycles: 5
+    heartbeat_interval: 60
+    lease_duration: 1800
+    coder_poll_interval: 30
+    coder_max_wait: 7200
+    orchestrator_poll_interval: 60
+    orchestrator_max_wait: 7200
+    reviewer_poll_interval: 30
+    reviewer_max_wait: 7200
+    integration_branch: integration
+    mode: PAUSED
+    mode_changed_at: 2026-04-12T16:56:00.231360078+02:00
+    mode_changed_by: operator

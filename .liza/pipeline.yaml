@@ -1,0 +1,522 @@
+pipeline:
+  roles:
+    orchestrator:
+      type: orchestrator
+      display-name: "Orchestrator"
+      description: "Decomposes goals, manages sprint lifecycle"
+      max-instances: 1
+      timeouts:
+        execution: 4h
+        poll-interval: 60s
+        max-wait: 30m
+      allowed-operations:
+        - add-tasks
+        - supersede-task
+        - cancel-task
+        - sprint-checkpoint
+        - analyze
+        - delete-agent
+        - clear-stale-review-claims
+        - update-sprint-metrics
+        - set-discovery-disposition
+      context-sections:
+        - orchestrator-dashboard
+        - wake-instructions
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - systemic-thinking
+      mandatory-docs: []
+
+    epic-planner:
+      type: doer
+      display-name: "Epic Planner"
+      description: "Decomposes objectives into structured epics"
+      timeouts:
+        execution: 2h
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - write-checkpoint
+        - submit-for-review
+        - mark-blocked
+        - handoff
+        - set-task-output
+        - await-verdict
+      context-sections:
+        - assigned-task
+        - worktree-rules
+        - collective-plan-scoping
+        - prior-rejection
+        - prior-attempt
+        - doer-state-transitions
+        - doer-tools
+        - capability-scoping
+        - implementation-phase
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - epic-writing
+        - systemic-thinking
+      mandatory-docs: []
+
+    epic-plan-reviewer:
+      type: reviewer
+      display-name: "Epic Plan Reviewer"
+      description: "Reviews epic plans, issues binding verdicts"
+      timeouts:
+        execution: 30m
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - submit-verdict
+        - await-resubmission
+      context-sections:
+        - review-task
+        - worktree-rules
+        - collective-plan-scoping
+        - prior-rejection
+        - reviewer-state-transitions
+        - reviewer-tools
+        - anomaly-logging
+        - review-instructions
+        - rejection-format
+        - verdict-submission
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - spec-review
+        - systemic-thinking
+      mandatory-docs: []
+
+    us-writer:
+      type: doer
+      display-name: "US Writer"
+      description: "Transforms epics into user stories"
+      timeouts:
+        execution: 2h
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - write-checkpoint
+        - submit-for-review
+        - mark-blocked
+        - handoff
+        - set-task-output
+        - await-verdict
+      context-sections:
+        - assigned-task
+        - worktree-rules
+        - collective-plan-scoping
+        - prior-rejection
+        - prior-attempt
+        - doer-state-transitions
+        - doer-tools
+        - capability-scoping
+        - implementation-phase
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - user-story-writing
+      mandatory-docs: []
+
+    us-reviewer:
+      type: reviewer
+      display-name: "US Reviewer"
+      description: "Reviews user stories, issues binding verdicts"
+      timeouts:
+        execution: 30m
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - submit-verdict
+        - await-resubmission
+      context-sections:
+        - review-task
+        - worktree-rules
+        - collective-plan-scoping
+        - prior-rejection
+        - reviewer-state-transitions
+        - reviewer-tools
+        - anomaly-logging
+        - review-instructions
+        - rejection-format
+        - verdict-submission
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - spec-review
+      mandatory-docs: []
+
+    code-planner:
+      type: doer
+      display-name: "Code Planner"
+      description: "Creates implementation plans from specs"
+      timeouts:
+        execution: 2h
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - write-checkpoint
+        - submit-for-review
+        - mark-blocked
+        - handoff
+        - set-task-output
+        - await-verdict
+      context-sections:
+        - assigned-task
+        - worktree-rules
+        - collective-plan-scoping
+        - prior-rejection
+        - prior-attempt
+        - doer-state-transitions
+        - doer-tools
+        - task-decomposition
+        - implementation-phase
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - software-architecture-review
+      mandatory-docs: []
+
+    code-plan-reviewer:
+      type: reviewer
+      display-name: "Code Plan Reviewer"
+      description: "Reviews implementation plans, issues binding verdicts"
+      timeouts:
+        execution: 30m
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - submit-verdict
+        - await-resubmission
+      context-sections:
+        - review-task
+        - worktree-rules
+        - collective-plan-scoping
+        - prior-rejection
+        - reviewer-state-transitions
+        - reviewer-tools
+        - anomaly-logging
+        - review-instructions
+        - rejection-format
+        - verdict-submission
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - software-architecture-review
+        - systemic-thinking
+      mandatory-docs: []
+
+    coder:
+      type: doer
+      display-name: "Coder"
+      description: "Implements code changes in isolated worktrees"
+      timeouts:
+        execution: 2h
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - write-checkpoint
+        - submit-for-review
+        - mark-blocked
+        - handoff
+        - set-task-output
+        - await-verdict
+      context-sections:
+        - assigned-task
+        - worktree-rules
+        - collective-plan-scoping
+        - handoff-resume
+        - integration-fix
+        - prior-rejection
+        - prior-attempt
+        - doer-state-transitions
+        - doer-tools
+        - anomaly-logging
+        - blocking-protocol
+        - commit-workflow
+        - implementation-phase
+        - submission-phase
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - debugging
+        - testing
+        - clean-code
+      mandatory-docs: []
+
+    code-reviewer:
+      type: reviewer
+      display-name: "Code Reviewer"
+      description: "Reviews code changes, issues binding verdicts"
+      timeouts:
+        execution: 30m
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - submit-verdict
+        - await-resubmission
+      context-sections:
+        - review-task
+        - worktree-rules
+        - collective-plan-scoping
+        - scope-extensions
+        - prior-rejection
+        - reviewer-state-transitions
+        - reviewer-tools
+        - anomaly-logging
+        - review-instructions
+        - rejection-format
+        - verdict-submission
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - code-review
+        - systemic-thinking
+        - software-architecture-review
+      mandatory-docs: []
+
+    architect:
+      type: doer
+      display-name: "Architect"
+      description: "Defines component boundaries, interfaces, and structural decisions for a change"
+      timeouts:
+        execution: 2h
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - write-checkpoint
+        - submit-for-review
+        - mark-blocked
+        - handoff
+        - set-task-output
+        - await-verdict
+      context-sections:
+        - assigned-task
+        - parent-tasks-context
+        - worktree-rules
+        - prior-rejection
+        - prior-attempt
+        - doer-state-transitions
+        - doer-tools
+        - implementation-phase
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - architecture-planning
+      mandatory-docs: []
+
+    architecture-reviewer:
+      type: reviewer
+      display-name: "Architecture Reviewer"
+      description: "Reviews architectural coherence, interface contracts, structural soundness"
+      timeouts:
+        execution: 30m
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - submit-verdict
+        - await-resubmission
+      context-sections:
+        - review-task
+        - worktree-rules
+        - prior-rejection
+        - reviewer-state-transitions
+        - reviewer-tools
+        - anomaly-logging
+        - review-instructions
+        - rejection-format
+        - verdict-submission
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - systemic-thinking
+      mandatory-docs: []
+
+    integration-analyst:
+      type: doer
+      display-name: "Integration Analyst"
+      description: "Scans full branch diff, produces mechanical integration findings"
+      timeouts:
+        execution: 2h
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - write-checkpoint
+        - submit-for-review
+        - mark-blocked
+        - handoff
+        - set-task-output
+        - await-verdict
+      context-sections:
+        - assigned-task
+        - worktree-rules
+        - branch-integration-context
+        - prior-rejection
+        - prior-attempt
+        - doer-state-transitions
+        - doer-tools
+        - anomaly-logging
+        - blocking-protocol
+        - submission-phase
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - code-review
+        - clean-code
+      mandatory-docs: []
+
+    integration-reviewer:
+      type: reviewer
+      display-name: "Integration Reviewer"
+      description: "Validates and enriches findings with systemic analysis"
+      timeouts:
+        execution: 30m
+        poll-interval: 30s
+        max-wait: 30m
+      allowed-operations:
+        - submit-verdict
+        - await-resubmission
+      context-sections:
+        - review-task
+        - worktree-rules
+        - branch-integration-context
+        - prior-rejection
+        - reviewer-state-transitions
+        - reviewer-tools
+        - anomaly-logging
+        - review-instructions
+        - rejection-format
+        - verdict-submission
+        - mandatory-docs
+        - skills-affinity
+      skills:
+        - systemic-thinking
+        - software-architecture-review
+      mandatory-docs: []
+
+  role-pairs:
+    epic-planning-pair:
+      doer: epic-planner
+      reviewer: epic-plan-reviewer
+      states:
+        initial: DRAFT_EPIC_PLAN
+        executing: EPIC_PLANNING
+        submitted: EPIC_PLAN_TO_REVIEW
+        reviewing: REVIEWING_EPIC_PLAN
+        approved: EPIC_PLAN_APPROVED
+        rejected: EPIC_PLAN_REJECTED
+
+    us-writing-pair:
+      doer: us-writer
+      reviewer: us-reviewer
+      states:
+        initial: DRAFT_US
+        executing: WRITING_US
+        submitted: US_READY_FOR_REVIEW
+        reviewing: REVIEWING_US
+        approved: US_APPROVED
+        rejected: US_REJECTED
+
+    code-planning-pair:
+      doer: code-planner
+      reviewer: code-plan-reviewer
+      states:
+        initial: DRAFT_CODING_PLAN
+        executing: CODE_PLANNING
+        submitted: CODING_PLAN_TO_REVIEW
+        reviewing: REVIEWING_CODING_PLAN
+        approved: CODING_PLAN_APPROVED
+        rejected: CODING_PLAN_REJECTED
+
+    coding-pair:
+      doer: coder
+      reviewer: code-reviewer
+      review-policy:
+        quorum: 1
+      states:
+        initial: DRAFT_CODE
+        executing: IMPLEMENTING_CODE
+        submitted: CODE_READY_FOR_REVIEW
+        reviewing: REVIEWING_CODE
+        approved: CODE_APPROVED
+        rejected: CODE_REJECTED
+        partially-approved: CODE_PARTIALLY_APPROVED
+        reviewing-2: REVIEWING_CODE_2
+
+    architecture-pair:
+      doer: architect
+      reviewer: architecture-reviewer
+      states:
+        initial: DRAFT_ARCHITECTURE
+        executing: ARCHITECTING
+        submitted: ARCHITECTURE_TO_REVIEW
+        reviewing: REVIEWING_ARCHITECTURE
+        approved: ARCHITECTURE_APPROVED
+        rejected: ARCHITECTURE_REJECTED
+
+    integration-pair:
+      doer: integration-analyst
+      reviewer: integration-reviewer
+      states:
+        initial: DRAFT_INTEGRATION_ANALYSIS
+        executing: ANALYZING_INTEGRATION
+        submitted: INTEGRATION_ANALYSIS_TO_REVIEW
+        reviewing: REVIEWING_INTEGRATION_ANALYSIS
+        approved: INTEGRATION_ANALYSIS_APPROVED
+        rejected: INTEGRATION_ANALYSIS_REJECTED
+        clean: INTEGRATION_ANALYSIS_CLEAN
+
+  sub-pipelines:
+    epic-spec-subpipeline:
+      steps:
+        - epic-planning-pair
+        - us-writing-pair
+      transitions:
+        - name: epic-to-us
+          from: epic-planning-pair.approved
+          to: us-writing-pair.initial
+          trigger: manual  # human validates epic decomposition
+          cardinality: per-subtask  # supervisor creates one downstream task per entry in output[]
+
+    coding-subpipeline:
+      steps:
+        - architecture-pair
+        - code-planning-pair
+        - coding-pair
+      transitions:
+        - name: architecture-to-code-plan
+          from: architecture-pair.approved
+          to: code-planning-pair.initial
+          trigger: manual  # human validates architectural decomposition
+          cardinality: per-subtask
+        - name: code-plan-to-coding
+          from: code-planning-pair.approved
+          to: coding-pair.initial
+          trigger: manual  # human validates implementation plan before coding begins
+          cardinality: per-subtask  # supervisor creates one downstream task per entry in output[]
+
+    integration-subpipeline:
+      steps:
+        - integration-pair
+        - coding-pair
+      transitions:
+        - name: integration-to-fix
+          from: integration-pair.approved
+          to: coding-pair.initial
+          trigger: auto
+          cardinality: per-subtask
+
+  pipeline-transitions:
+    - name: us-to-coding
+      from: epic-spec-subpipeline.us-writing-pair.approved
+      to: coding-subpipeline.architecture-pair.initial
+      trigger: manual
+      cardinality: many-to-one  # N approved US → 1 architecture task
+
+  # Orchestrator is implicit — mandatory, unique, not part of any pipeline.
+  # It reads entry-points below to classify input and dispatch to the right sub-pipeline.
+  entry-points:
+    general-objective: epic-spec-subpipeline.epic-planning-pair
+    detailed-spec: coding-subpipeline.architecture-pair

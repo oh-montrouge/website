@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "liza": {
+      "args": [
+        "--project-root",
+        "."
+      ],
+      "command": "liza-mcp"
+    }
+  }
+}
