@@ -1,0 +1,16 @@
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "webapp/**/*.go"
+      root: webapp
+      run: test -z "$(gofmt -l .)"
+      fail_text: "Go files need formatting — run: gofmt -w . from webapp/"
+    vet:
+      glob: "webapp/**/*.go"
+      root: webapp
+      run: go vet ./...
+    lint:
+      glob: "webapp/**/*.go"
+      root: webapp
+      run: golangci-lint run ./...

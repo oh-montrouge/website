@@ -1,0 +1,16 @@
+# Buffalo build artifacts
+bin/
+tmp/
+
+# Environment files (see .env.*.example for templates)
+.env
+.env.*
+!.env.*.example
+
+# Generated assets (rebuilt from public/assets/ sources)
+public/assets/application.css
+public/assets/application.js
+public/assets/buffalo.css
+
+# Node (not used, but guard against accidental installs)
+node_modules/

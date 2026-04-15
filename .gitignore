@@ -4,3 +4,5 @@ CLAUDE.local.md
 # Contains personal identifiable information (PII)
 current/gdrive-liste-musiciens
 current/ohm-agenda/db_export.sql
+
+.mise/prepare-state.toml

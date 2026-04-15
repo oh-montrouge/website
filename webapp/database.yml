@@ -1,0 +1,9 @@
+---
+development:
+  url: {{envOr "DATABASE_URL" "postgres://ohm:ohm@127.0.0.1:5432/ohm_development?sslmode=disable"}}
+
+test:
+  url: {{envOr "TEST_DATABASE_URL" "postgres://ohm:ohm@127.0.0.1:5432/ohm_test?sslmode=disable"}}
+
+production:
+  url: {{envOr "DATABASE_URL" "postgres://ohm:ohm@127.0.0.1:5432/ohm_production?sslmode=disable"}}

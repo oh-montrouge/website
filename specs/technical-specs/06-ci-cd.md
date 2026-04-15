@@ -13,7 +13,7 @@ Managed by **Lefthook** (`lefthook.yml` at repo root). Hooks are registered on f
 |------|---------|-------------------|
 | `gofmt` | `gofmt -l .` | Any file is not formatted |
 | `go-vet` | `go vet ./...` | Any vet error |
-| `golangci-lint` | `golangci-lint run --fast ./...` | Any lint error |
+| `golangci-lint` | `golangci-lint run ./...` | Any lint error |
 
 Hooks can be skipped with `LEFTHOOK=0 git commit` for emergency commits, but CI enforces the
 same checks and will reject unformatted or unlinted code.
