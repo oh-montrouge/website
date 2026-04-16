@@ -42,7 +42,24 @@ testcontainers-go manages the PostgreSQL container lifecycle from within the tes
 GitHub Actions runners have Docker available by default — no service container configuration
 needed in the workflow.
 
-Both jobs run in parallel. Both must pass before a pull request can be merged.
+### Job: migrations
+
+Validates that every migration is fully reversible. Intentionally decoupled from the Go test
+suite — migration correctness is a schema concern, not an application behaviour concern. A
+failure here points directly at a broken migration file, not at application code.
+
+1. Check out code
+2. Install Go and Buffalo CLI (versions from `mise.toml`)
+3. Start a PostgreSQL service container
+4. Set `DATABASE_URL` from the service container connection string
+5. `buffalo pop migrate --path db/migrations` — apply all migrations (up)
+6. Roll back all migrations (down)
+7. `buffalo pop migrate --path db/migrations` — re-apply all migrations (up)
+
+Exact rollback command (`buffalo pop migrate down` step count or `reset` subcommand) to be
+confirmed against the Pop CLI version in use during Phase 1 implementation.
+
+All three jobs run in parallel. All must pass before a pull request can be merged.
 
 ---
 
