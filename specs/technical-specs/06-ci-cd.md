@@ -22,7 +22,7 @@ same checks and will reject unformatted or unlinted code.
 
 ## CI (GitHub Actions)
 
-Triggered on every push and every pull request targeting `main`.
+Triggered on every pull request (all branches).
 
 ### Job: lint
 

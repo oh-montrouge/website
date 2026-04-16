@@ -25,7 +25,7 @@ Run `mise install` once after cloning to install Go and the Buffalo CLI.
 ## Quick start
 
 ```bash
-mise install        # Install Go, Buffalo CLI, Lefthook, golangci-lint — and register git hooks
+mise install        # Install Go, Buffalo CLI, buffalo-pop, Lefthook, golangci-lint — and register git hooks
 
 cp webapp/.env.development.example webapp/.env
 # Edit webapp/.env: set SESSION_SECRET to at least 32 random bytes
