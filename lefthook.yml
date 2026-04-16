@@ -14,3 +14,14 @@ pre-commit:
       glob: "webapp/**/*.go"
       root: webapp
       run: golangci-lint run ./...
+    tidy:
+      glob: "webapp/go.{mod,sum}"
+      root: webapp
+      run: go mod tidy && git diff --exit-code go.mod go.sum
+      fail_text: "go.mod/go.sum out of sync — run: go mod tidy from webapp/"
+
+commit-msg:
+  commands:
+    conventional:
+      run: "grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\(.+\\))?(!)?: .+' {1}"
+      fail_text: "Commit message must follow Conventional Commits — e.g. feat(auth): add login handler"
