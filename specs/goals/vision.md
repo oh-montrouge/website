@@ -109,7 +109,7 @@ In scope:
 - [x] Iterate until a fresh-context prompt passes the gate:
   > "Review `specs/functional-specs/` and `specs/technical-specs/` as if you were about to decompose them into implementation tasks. Apply KISS — default to the simplest reasonable interpretation — before flagging. Only flag items where the simplest interpretation is itself ambiguous or where two equally simple interpretations contradict each other."
 - [x] Get stakeholder alignment.
-- [x] Define a high-level roadmap
+- [x] Define a high-level roadmap — see `specs/plans/v1/v1.md`
 
 ### Later
 

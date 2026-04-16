@@ -4,6 +4,7 @@ experimental = true
 [tools]
 go = "1.26.2"
 "go:github.com/gobuffalo/cli/cmd/buffalo" = "v0.18.14"
+"go:github.com/gobuffalo/buffalo-pop/v3" = "v3.0.7"
 lefthook = "2.1.5"
 golangci-lint = "2.11.4"
 
