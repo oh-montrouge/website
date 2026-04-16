@@ -68,27 +68,21 @@ This project is primarily an **internal operations project**. The goal is to rep
 
 **Success condition:** OHM Agenda and the seasonal Google Sheet can be decommissioned, and Free.fr hosting can be abandoned.
 
-**Account model:** Admins create musician accounts. The system generates a one-time invite link, displayed in the UI for the admin to copy and send manually (e.g. from the association's email address); the musician follows it to a single-page form presenting: a password field, a privacy notice acknowledgement checkbox, and a combined phone/address consent checkbox. Submitting the form completes account setup and grants access. Password reset is also admin-mediated: the admin generates a one-time reset link in the UI, displayed for copying and sending manually. Invite links and password-reset links expire after 7 days. An expired invite link leaves the account in a pending state (cannot log in) — the admin can generate a new invite link at any time. An expired password-reset link leaves the account unaffected — the admin generates a new reset link. No system email infrastructure required.
-
-Phone and address share a single combined consent, given on the invite-link form. These fields are locked until consent is recorded; the admin can fill them only after consent is given. Birth date is optional. If provided and indicates the member is under 15, the parental consent URI field becomes required before the account can be saved. If birth date is left blank, no parental consent check is triggered. The system prevents removing the admin role from the last remaining admin account.
-
-An account that has completed the invite flow is active. Account states: pending → active → anonymized (terminal). There is no separate deactivation — anonymization is the only mechanism for revoking login access.
+**Account model:** Admins create and manage musician accounts via an admin-mediated invite and password-reset flow; no system email infrastructure is required. Accounts progress through three states: pending → active → anonymized (terminal). Anonymization is the sole mechanism for revoking access. See [`functional-specs/01-account-lifecycle.md`](../functional-specs/01-account-lifecycle.md).
 
 In scope:
-- Individual accounts — no more shared credentials; all accounts are musician accounts; the admin role is a permission that can be granted to any account
-- Admin can grant or revoke the admin role on any account; the system prevents removing the admin role from the last remaining admin account
-- Admin can create a season with a configurable date range and designate one as current — no more PhPMyAdmin; exactly one season is designated current at all times; the current designation cannot be removed without designating another season as current
-- Admin can manage musicians; musician record fields: name, email, main instrument (from a controlled list sourced from OHM Agenda, plus "Chef d'orchestre"), birth date (optional; if provided and indicates under 15, a parental consent URI is required before the account can be saved), and phone/address (admin-editable only after the musician has given consent); parental consent URI, if set, is visible in the admin account detail view
-- Admin can record a single fee payment per season for a musician, for any season (amount, date, type: chèque / espèces / virement bancaire; optional comment); payments can be edited or deleted; first inscription date is derived automatically from the musician's first recorded fee payment — no more Google Sheet duplication
-- Admin can anonymize a musician account: all personal fields (name, email, birth date, phone, address, parental consent URI) are erased; main instrument is retained; fee payment records are anonymised (name replaced with a single opaque token generated at anonymization time and applied to all of that musician's payment records; season, amount, and payment type retained)
-- Admin can delete a pending account (invite never accepted; no consent recorded)
-- Admin can clear a musician's phone and address fields on the musician's behalf (consent withdrawal)
-- Admin can create, edit, and delete events (name, date/time, type: concert / rehearsal / other — mirroring OHM Agenda); deleting an event removes all associated RSVP records (event deletion is the GDPR compliance path for RSVP records — RSVPs have a 2-year post-event retention; no separate cleanup tool in V1); new events start with all active accounts in an "unanswered" RSVP state; musicians can RSVP (yes / no / maybe) and change their RSVP at any time; all authenticated users can see the full RSVP list for an event (yes / no / maybe / unanswered; for concerts, the instrument of each musician who answered yes is also shown); when RSVPing yes to a concert, a musician selects which instrument they will play (main instrument pre-selected by default; changing a yes RSVP to no or maybe discards the selection); musicians who join after event creation start in the "unanswered" state for events that have not yet occurred — no more OHM Agenda
-- Musician can view their own profile, showing: name, main instrument, email, birth date (if set), phone and address (if consented), and a static notice explaining how to withdraw consent for phone and address
-- Musician can access sheet music via a single Google Drive link, configured at deploy time (no admin UI), displayed as a dedicated menu item to all authenticated users; the menu item is hidden if the link is not configured; access control is handled at the Google Drive level
-- Admin can flag an account as "processing restricted" (GDPR Art. 18); has no operational effect in V1 beyond storage and display, and does not affect login
-- Admin can view a list of accounts whose data retention period has elapsed
-- Homepage: a public page presenting the association briefly, accessible to all visitors (authenticated and unauthenticated); content is static (bundled with the application)
+- Individual musician accounts; no shared credentials; the admin role is a permission, not a separate account type
+- Admin role grant/revoke with last-admin protection
+- Season management with a single designated current season; no PhPMyAdmin required
+- Musician record management including GDPR-sensitive fields (phone, address, parental consent)
+- Fee payment recording per season; first inscription date derived automatically — no more Google Sheet duplication
+- Account anonymization (GDPR right to erasure) with fee payment pseudonymisation
+- Consent withdrawal and deletion of pending accounts
+- Event management (concert / rehearsal / other) with musician RSVPs; event deletion is the GDPR retention path — no more OHM Agenda
+- Musician profile view
+- Sheet music access via a configured Google Drive link
+- GDPR processing restriction flag and data retention review list
+- Public homepage with static content
 
 #### Steps
 
@@ -115,12 +109,7 @@ In scope:
 - [x] Iterate until a fresh-context prompt passes the gate:
   > "Review `specs/functional-specs/` and `specs/technical-specs/` as if you were about to decompose them into implementation tasks. Apply KISS — default to the simplest reasonable interpretation — before flagging. Only flag items where the simplest interpretation is itself ambiguous or where two equally simple interpretations contradict each other."
 - [x] Get stakeholder alignment.
-- [x] Define a high-level roadmap?
-- [ ] Break down into deliverable Epic Stories.
-- [ ] Cycle:
-  - [ ] Break down the next Epic Story into User Stories.
-  - [ ] Implement the User Stories.
-  - [ ] Review the vision and remaining Epic Stories.
+- [x] Define a high-level roadmap
 
 ### Later
 
@@ -138,7 +127,7 @@ In scope:
 - Secure
 - GDPR compliant (see [`specs/goals/gdpr.md`](gdpr.md))
 - Accessible (WCAG A; Lighthouse accessibility score ≥ 80)
-- In French — i18n not planned
+- In French
 - Data from old system should be migrated (see [specs/technical-specs/07-data-migration.md](07-data-migration.md))
 
 ### Technical
