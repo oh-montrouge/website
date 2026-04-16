@@ -1,0 +1,68 @@
+[settings]
+experimental = true
+
+[tools]
+go = "1.26.2"
+"go:github.com/gobuffalo/cli/cmd/buffalo" = "v0.18.14"
+lefthook = "2.1.5"
+golangci-lint = "2.11.4"
+
+[prepare.lefthook]
+auto = true
+sources = ["lefthook.yml"]
+outputs = [".git/hooks/pre-commit"]
+run = "lefthook install"
+description = "Register git pre-commit hooks — reruns automatically when lefthook.yml changes"
+
+[[hooks.postinstall]]
+script = "mise prepare"
+
+[tasks.dev]
+description = "Start local environment (postgres in Docker + buffalo dev)"
+dir = "webapp"
+run = "docker compose up -d postgres && buffalo dev"
+
+[tasks.stop]
+description = "Stop the local development environment (postgres + buffalo dev)"
+dir = "webapp"
+run = """
+docker compose stop
+pkill -f ohm-build || true
+"""
+[tasks.migrate]
+description = "Apply pending DB migrations"
+dir = "webapp"
+run = "buffalo pop migrate --path ../db/migrations"
+
+# TODO: not yet implemented — test when grift task db:seed:admin is written (Phase 3)
+[tasks.seed-admin]
+description = "Create first admin account (bootstrap; refuses if one already exists)"
+dir = "webapp"
+run = "buffalo task db:seed:admin"
+
+# TODO: not yet implemented — test when grift task db:recover:admin is written (Phase 3)
+[tasks.recover-admin]
+description = "Emergency: force-reset an active account password directly in the DB"
+dir = "webapp"
+run = "buffalo task db:recover:admin"
+
+# TODO: not yet implemented — test when grift task db:seed:dev is written (Phase 3)
+[tasks.seed-dev]
+description = "Populate dev DB with dummy data (local only)"
+dir = "webapp"
+run = "buffalo task db:seed:dev"
+
+[tasks.test]
+description = "Run test suite — Docker daemon must be running (testcontainers manages its own postgres)"
+dir = "webapp"
+run = "GO_ENV=test go test -race ./..."
+
+[tasks.lint]
+description = "Run full linter suite"
+dir = "webapp"
+run = "golangci-lint run ./..."
+
+# TODO: no prod infra yet — test when OVH VPS and Docker Compose prod setup are in place (Phase 2)
+[tasks.deploy]
+description = "Deploy to production VPS via SSH"
+run = "ssh $DEPLOY_HOST 'cd /srv/ohm && docker compose pull && docker compose up -d && docker compose exec -T app buffalo pop migrate --path ../db/migrations'"

@@ -34,6 +34,32 @@ driver with support for partial indexes. Traffic is low; performance is not a pr
 
 ## Eliminated Without Full Analysis
 
+### Next.js / Nuxt.js (SSR-capable SPA frameworks)
+
+Raised as an alternative on the basis that TypeScript/Node is the current industry standard and
+that these frameworks provide batteries-included SSR.
+
+They are capable but not batteries-included for this use case. Next.js and Nuxt.js are SPA
+frameworks with SSR capabilities, not traditional server-rendered frameworks. The mental model
+is: write React/Vue components → server renders initial HTML → browser hydrates and takes over
+with client-side JavaScript. For OHM's use case (admin-heavy CRUD, simple forms and lists, no
+real-time requirements), the React/Vue component model is overhead with no UX return.
+
+Assembly cost against V1 requirements mirrors plain Node/TypeScript (option C above):
+
+| Requirement | Next.js / Nuxt.js |
+|---|---|
+| Sessions | `iron-session` or Auth.js — neither fits the custom invite flow cleanly; significant config |
+| ORM + migrations | Prisma or Drizzle — good, but a separate choice |
+| CSRF | Explicit setup; no built-in middleware |
+| Argon2id | `argon2` npm package — native bindings, adds Docker build complexity |
+| Management CLI | No equivalent to `buffalo task`; custom scripts required |
+
+Familiarity advantage is real: more developers know React/Vue than Buffalo. That is a
+maintainability argument, not a technical one — see Decision Revisited below.
+
+---
+
 ### Single-Page Application (React / Vue / Svelte)
 
 A SPA frontend paired with a JSON API backend was not evaluated. The exclusion originated in
@@ -327,3 +353,43 @@ Key alignment with prior ADRs:
 Flask and Node/TypeScript were not chosen: they offer neither the assembly-free convenience of
 Buffalo nor the learning payoff of Rust. Rust (Axum) remains the strongest alternative for a
 future project where learning the language itself is the primary goal.
+
+---
+
+## Decision Revisited
+
+**Date:** 2026-04-16. **Outcome: reaffirmed.** Walking skeleton to proceed with Go + Buffalo.
+
+### Challenge raised
+
+Two concerns were raised by a stakeholder:
+
+1. **Familiarity:** Buffalo is not widely known; TypeScript/Node (specifically Next.js or
+   Nuxt.js) is the current industry standard for web development. Long-term maintainability
+   could suffer if future maintainers are TypeScript-native.
+
+2. **Architectural detection:** Working in an unfamiliar language might make it harder to
+   detect architectural issues early.
+
+### Response
+
+**On familiarity:** Next.js and Nuxt.js were evaluated (see Eliminated section above). They
+are not more batteries-included than Buffalo for this use case — sessions, ORM, CSRF, and CLI
+tooling all require separate assembly. The familiarity argument is real but applies equally to
+the entire Go ecosystem, not specifically to Buffalo. It is a valid long-term maintenance
+concern, not a technical disqualifier.
+
+**On architectural detection:** Architectural issues are structural, not linguistic. Schema
+coupling, middleware ordering, session lifecycle, missing invariants, and GDPR compliance gaps
+surface from the design, not from which language implements it. The specs themselves — written
+before a single line of code — are the primary guard. Language familiarity affects
+implementation speed, not the ability to reason about correctness.
+
+### Resolution
+
+A walking skeleton will be built with Go + Buffalo. This is a deliberate, low-risk trial:
+the skeleton exercises the full stack (DB, sessions, auth, CSRF, templates) with minimal
+domain logic. If it reveals fundamental friction — Buffalo's conventions fighting the design,
+rough edges around Pop/pgstore/gorilla that cannot be smoothed without significant effort —
+the decision reopens at that point with evidence. If the skeleton ships cleanly, the decision
+is confirmed for V1.
