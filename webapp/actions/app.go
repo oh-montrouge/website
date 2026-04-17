@@ -1,13 +1,17 @@
 package actions
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"ohmontrouge/webapp/locales"
 	"ohmontrouge/webapp/models"
 	"ohmontrouge/webapp/public"
+	"ohmontrouge/webapp/services"
 
+	"github.com/antonlindstrom/pgstore"
 	"github.com/gobuffalo/buffalo"
 	"github.com/gobuffalo/buffalo-pop/v3/pop/popmw"
 	"github.com/gobuffalo/envy"
@@ -18,8 +22,6 @@ import (
 	"github.com/unrolled/secure"
 )
 
-// ENV is used to help switch settings based on where the
-// application is being run. Default is "development".
 var ENV = envy.Get("GO_ENV", "development")
 
 var (
@@ -28,56 +30,58 @@ var (
 	T       *i18n.Translator
 )
 
-// App is where all routes and middleware for buffalo
-// should be defined. This is the nerve center of your
-// application.
-//
-// Routing, middleware, groups, etc... are declared TOP -> DOWN.
-// This means if you add a middleware to `app` *after* declaring a
-// group, that group will NOT have that new middleware. The same
-// is true of resource declarations as well.
-//
-// It also means that routes are checked in the order they are declared.
-// `ServeFiles` is a CATCH-ALL route, so it should always be
-// placed last in the route declarations, as it will prevent routes
-// declared after it to never be called.
 func App() *buffalo.App {
 	appOnce.Do(func() {
+		sessionSecret, err := envy.MustGet("SESSION_SECRET")
+		if err != nil {
+			panic(fmt.Sprintf("SESSION_SECRET not set: %v", err))
+		}
+		dbURL, err := envy.MustGet("DATABASE_URL")
+		if err != nil {
+			panic(fmt.Sprintf("DATABASE_URL not set: %v", err))
+		}
+		store, err := pgstore.NewPGStore(dbURL, []byte(sessionSecret))
+		if err != nil {
+			panic(fmt.Sprintf("pgstore: %v", err))
+		}
+		store.StopCleanup(store.Cleanup(time.Hour))
+
 		app = buffalo.New(buffalo.Options{
-			Env:         ENV,
-			SessionName: "_ohm_session",
+			Env:          ENV,
+			SessionName:  "_ohm_session",
+			SessionStore: store,
 		})
 
-		// Automatically redirect to SSL
 		app.Use(forceSSL())
-
-		// Log request parameters (filters apply).
 		app.Use(paramlogger.ParameterLogger)
-
-		// Protect against CSRF attacks. https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)
-		// Remove to disable this.
 		app.Use(csrf.New)
-
-		// Wraps each request in a transaction.
-		//   c.Value("tx").(*pop.Connection)
-		// Remove to disable this.
 		app.Use(popmw.Transaction(models.DB))
-		// Setup and use translations:
 		app.Use(translations())
 
-		app.GET("/", HomeHandler)
-		app.GET("/instruments", InstrumentsHandler{Instruments: models.InstrumentStore{}}.Index)
+		authSvc := services.AccountService{
+			Accounts: models.AccountStore{},
+			Roles:    models.AccountRoleStore{},
+		}
+		auth := AuthHandler{Accounts: authSvc, Sessions: models.HTTPSessionStore{}, DB: models.DB}
 
-		app.ServeFiles("/", http.FS(public.FS())) // serve files from the public directory
+		app.GET("/connexion", auth.Form)
+		app.POST("/connexion", auth.Submit)
+		app.GET("/deconnexion", auth.Logout)
+
+		admin := app.Group("/admin")
+		admin.Use(RequireActiveAccount(authSvc))
+		admin.Use(RequireAdmin(authSvc))
+		admin.GET("/", func(c buffalo.Context) error {
+			return c.Render(http.StatusOK, r.HTML("admin/index.plush.html"))
+		})
+
+		app.GET("/", HomeHandler)
+		app.ServeFiles("/", http.FS(public.FS()))
 	})
 
 	return app
 }
 
-// translations will load locale files, set up the translator `actions.T`,
-// and will return a middleware to use to load the correct locale for each
-// request.
-// for more information: https://gobuffalo.io/en/docs/localization
 func translations() buffalo.MiddlewareFunc {
 	var err error
 	if T, err = i18n.New(locales.FS(), "en-US"); err != nil {
@@ -86,11 +90,6 @@ func translations() buffalo.MiddlewareFunc {
 	return T.Middleware()
 }
 
-// forceSSL will return a middleware that will redirect an incoming request
-// if it is not HTTPS. "http://example.com" => "https://example.com".
-// This middleware does **not** enable SSL. for your application. To do that
-// we recommend using a proxy: https://gobuffalo.io/en/docs/proxy
-// for more information: https://github.com/unrolled/secure/
 func forceSSL() buffalo.MiddlewareFunc {
 	return forcessl.Middleware(secure.Options{
 		SSLRedirect:     ENV == "production",

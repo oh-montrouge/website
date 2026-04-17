@@ -14,6 +14,7 @@ grifts/          CLI tasks (db:seed:admin, db:recover:admin, db:seed:dev)
 locales/         i18n strings
 models/          Pop models and DB query functions
 public/          Static assets
+services/        Domain logic and repository interfaces
 templates/       Plush HTML templates
 docker-compose.yml   PostgreSQL 17 for local development
 database.yml     Pop database configuration (reads DATABASE_URL)
@@ -25,15 +26,32 @@ they can be run by any SQL-capable tool.
 
 ## Architecture conventions
 
+### Three-layer architecture
+
+```
+actions/    HTTP orchestration only. Extract tx from context, call service or
+            repository, set template variables, render. No business rules.
+
+services/   Domain logic. Business rules, complex transactions, cross-entity
+            operations. Depends on repository interfaces (defined here). No SQL.
+            Fully testable with stubbed repositories.
+
+models/     DB access only. Structs with db: tags, Pop queries, repository
+            interface implementations. No business rules.
+```
+
+Dependency direction: `actions` → `services` → repository interfaces ← `models`.
+`actions` does not import `models` directly.
+
 ### Request lifecycle
 
 ```
 Router (actions/app.go)
   → Middleware (auth check, DB transaction, CSRF…)
-    → Handler (actions/*.go)       ← orchestrates: fetch, shape, render
-        → Model (models/*.go)      ← DB queries only, no display logic
-        → DTO (dto/*.go)           ← optional: shapes data for the template
-        → Template (templates/)    ← display only, no logic
+    → Handler (actions/*.go)      ← orchestrates: call service, set vars, render
+        → Service (services/*.go) ← domain logic; calls repository interface
+            → Model (models/*.go) ← DB queries only
+        → Template (templates/)   ← display only, no logic
 ```
 
 ### When to pass the ORM struct directly to the template
@@ -88,5 +106,4 @@ See [`TESTING.md`](TESTING.md) for the full test strategy, how testcontainers an
 - **Go 1.26** / **Buffalo v1.1.4** — web framework with routing, middleware, Plush templates
 - **Pop v6** — ORM and migration runner (migrations are raw SQL)
 - **PostgreSQL 17** — primary database
-- **pgstore** — gorilla/sessions PostgreSQL backend; 7-day fixed TTL sessions
-- **Argon2id** — password hashing
+- **Argon2id** — password hashing (`golang.org/x/crypto/argon2`, PHC format)
