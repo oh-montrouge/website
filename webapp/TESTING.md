@@ -7,9 +7,10 @@ Tests are split by layer, with a different tool and different isolation level fo
 | Layer | Kind | Tool | DB? |
 |---|---|---|---|
 | `models/` | Integration | testcontainers-go + plain `testing` | Real PostgreSQL (ephemeral container) |
+| `services/` | Unit | plain `testing` + stub repositories | No — stubs only |
 | `actions/` | Unit | `net/http/httptest` + plain `testing` | No — stubs only |
 
-The split is deliberate. Models are the DB boundary; integration tests there verify that SQL queries, ordering, and constraints behave correctly against a real engine. Actions are orchestration; unit tests there verify HTTP concerns (status codes, redirects, what gets set on the context) without caring about the DB at all.
+The split is deliberate. Models are the DB boundary; integration tests there verify that SQL queries, ordering, and constraints behave correctly against a real engine. Services contain business rules; unit tests there verify logic in isolation with stubbed repositories. Actions are HTTP orchestration; unit tests there verify status codes and rendering without any DB or domain logic.
 
 ---
 
@@ -44,6 +45,41 @@ func TestSomething(t *testing.T) {
     // assert with standard if/t.Fatal patterns, or import testify/assert
 }
 ```
+
+---
+
+## Service unit tests (`services/`)
+
+### How it works
+
+Services depend on repository interfaces, not on Pop directly. Tests define a stub struct that implements the interface and returns fixed data or errors — no DB, no container.
+
+Tests live in `package services_test` (external test package) to verify the public API.
+
+### Writing a new service test
+
+```go
+// 1. Define a stub for the repository the service uses
+type stubAccountRepo struct {
+    account *models.Account
+    err     error
+}
+func (s stubAccountRepo) FindByEmail(_ *pop.Connection, _ string) (*models.Account, error) {
+    return s.account, s.err
+}
+func (s stubAccountRepo) GetByID(_ *pop.Connection, _ int64) (*models.Account, error) {
+    return s.account, s.err
+}
+
+// 2. Inject the stub and exercise the service method
+func TestSomeService_SomeCase(t *testing.T) {
+    svc := services.SomeService{Accounts: stubAccountRepo{err: errors.New("not found")}}
+    _, err := svc.SomeMethod(nil, ...)
+    assert.ErrorIs(t, err, services.ErrAccountNotFound)
+}
+```
+
+Pass `nil` for `*pop.Connection` — stubs ignore it, and service logic must not dereference it either.
 
 ---
 
@@ -87,7 +123,7 @@ func TestWidgetsIndex_ReturnsWidgets(t *testing.T) {
 
 ### Repository interfaces
 
-Every handler struct declares its dependencies as interfaces defined in `actions/repositories.go`. The production wiring in `app.go` passes the real model store; tests pass stubs. See `webapp/README.md` § Architecture conventions for the full rationale.
+Handler structs declare their dependencies as interfaces defined in `services/repositories.go`. The production wiring in `app.go` passes the real model store; tests pass stubs. See `webapp/README.md` § Architecture conventions for the full rationale.
 
 ---
 

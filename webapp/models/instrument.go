@@ -18,7 +18,7 @@ func InstrumentsList(tx *pop.Connection) (Instruments, error) {
 	return instruments, err
 }
 
-// InstrumentStore is the production implementation of actions.InstrumentRepository.
+// InstrumentStore is the production implementation of services.InstrumentRepository.
 type InstrumentStore struct{}
 
 func (InstrumentStore) List(tx *pop.Connection) (Instruments, error) {

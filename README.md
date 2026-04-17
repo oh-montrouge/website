@@ -42,11 +42,11 @@ mise run migrate    # Apply pending migrations (first run: creates schema + seed
 | `mise run stop` | Stop postgres + kill the running dev server |
 | `mise run migrate` | Apply pending DB migrations |
 | `mise run test` | Run test suite (starts postgres, creates test DB, migrates, tests) |
-| `mise run lint` | Run golangci-lint (Phase 1 — not yet wired up) |
-| `mise run seed-admin` | Create first admin account (Phase 3 — not yet implemented) |
-| `mise run seed-dev` | Populate DB with dev dummy data (Phase 3 — not yet implemented) |
-| `mise run recover-admin` | Emergency admin password reset (Phase 3 — not yet implemented) |
-| `mise run deploy` | Deploy to production VPS (Phase 2 — no infra yet) |
+| `mise run lint` | Run golangci-lint |
+| `mise run seed-admin` | Create first admin account |
+| `mise run seed-dev` | Populate DB with dev dummy data (Phase 4 — not yet implemented) |
+| `mise run recover-admin` | Emergency admin password reset |
+| `mise run deploy` | Deploy to production VPS (Phase 3 — no infra yet) |
 
 ## Specs
 

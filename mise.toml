@@ -21,7 +21,7 @@ script = "mise prepare"
 [tasks.dev]
 description = "Start local environment (postgres in Docker + buffalo dev)"
 dir = "webapp"
-run = "docker compose up -d postgres && buffalo dev"
+run = "docker compose up -d --wait postgres && buffalo dev"
 
 [tasks.stop]
 description = "Stop the local development environment (postgres + buffalo dev)"
@@ -35,13 +35,11 @@ description = "Apply pending DB migrations"
 dir = "webapp"
 run = "buffalo pop migrate --path ../db/migrations"
 
-# TODO: not yet implemented — test when grift task db:seed:admin is written (Phase 3)
 [tasks.seed-admin]
 description = "Create first admin account (bootstrap; refuses if one already exists)"
 dir = "webapp"
 run = "buffalo task db:seed:admin"
 
-# TODO: not yet implemented — test when grift task db:recover:admin is written (Phase 3)
 [tasks.recover-admin]
 description = "Emergency: force-reset an active account password directly in the DB"
 dir = "webapp"

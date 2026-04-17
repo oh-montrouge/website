@@ -1,6 +1,11 @@
 services:
   postgres:
     image: postgres:17-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ohm -d ohm_development"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
     environment:
       POSTGRES_USER: ohm
       POSTGRES_PASSWORD: ohm

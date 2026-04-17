@@ -22,6 +22,7 @@ A technical ADR may supersede a functional one when a technical constraint requi
 | [004](004-framework-and-language.md) | Framework and Language | Accepted |
 | [005](005-role-model.md) | Role Model: Association Table over Boolean Flag | Accepted |
 | [006](006-backup-strategy.md) | Database Backup Strategy | Accepted |
+| [007](007-account-musician-dtos.md) | Two-DTO Pattern: AccountDTO and MusicianProfile | Accepted |
 
 ## Open Decisions
 
