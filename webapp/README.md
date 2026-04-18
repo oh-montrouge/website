@@ -3,18 +3,20 @@
 Go/Buffalo application for the OHM website. See the root `README.md` for project-wide
 setup instructions and the full task reference.
 
+See [`architecture.md`](architecture.md) for component structure, service ownership,
+layer conventions, and DTO policy.
+
 ## Layout
 
 ```
 actions/         HTTP handlers (Buffalo controllers)
 cmd/app/         Application entrypoint
 config/          Buffalo configuration (buffalo-app.toml, middleware)
-dto/             View models / DTOs (see Architecture conventions below)
 grifts/          CLI tasks (db:seed:admin, db:recover:admin, db:seed:dev)
 locales/         i18n strings
 models/          Pop models and DB query functions
 public/          Static assets
-services/        Domain logic and repository interfaces
+services/        Domain logic, repository interfaces, and DTOs
 templates/       Plush HTML templates
 docker-compose.yml   PostgreSQL 17 for local development
 database.yml     Pop database configuration (reads DATABASE_URL)
@@ -23,57 +25,6 @@ database.yml     Pop database configuration (reads DATABASE_URL)
 
 Migrations live at `../db/migrations/` (repo root) — decoupled from the framework so
 they can be run by any SQL-capable tool.
-
-## Architecture conventions
-
-### Three-layer architecture
-
-```
-actions/    HTTP orchestration only. Extract tx from context, call service or
-            repository, set template variables, render. No business rules.
-
-services/   Domain logic. Business rules, complex transactions, cross-entity
-            operations. Depends on repository interfaces (defined here). No SQL.
-            Fully testable with stubbed repositories.
-
-models/     DB access only. Structs with db: tags, Pop queries, repository
-            interface implementations. No business rules.
-```
-
-Dependency direction: `actions` → `services` → repository interfaces ← `models`.
-`actions` does not import `models` directly.
-
-### Request lifecycle
-
-```
-Router (actions/app.go)
-  → Middleware (auth check, DB transaction, CSRF…)
-    → Handler (actions/*.go)      ← orchestrates: call service, set vars, render
-        → Service (services/*.go) ← domain logic; calls repository interface
-            → Model (models/*.go) ← DB queries only
-        → Template (templates/)   ← display only, no logic
-```
-
-### When to pass the ORM struct directly to the template
-
-Acceptable when all three hold:
-- The struct contains no sensitive fields (no `password_hash`, no `anonymization_token`)
-- No display transformation is needed (no date formatting, no computed labels)
-- The template maps 1-to-1 with the DB columns
-
-`Instrument` (ID + Name, read-only reference data) is the canonical example.
-
-### When to use a DTO
-
-Introduce a DTO when any of these apply:
-- **Sensitive fields must be hidden** — e.g. `Account` (never expose `password_hash`)
-- **Display logic is needed** — e.g. `Event.datetime` is stored UTC, displayed in Europe/Paris; the conversion belongs here, not in the template
-- **Multiple queries feed one view** — e.g. a musician profile page combining account, fee payments, and RSVPs
-- **Anonymization changes the display** — e.g. `FeePayment` shows a name or an anonymization token depending on account state
-
-DTOs live in `dto/`. Name them after the template they serve, not the model:
-`dto.InstrumentRow`, `dto.AccountListItem`, `dto.EventDetail`. The handler is
-responsible for building them from model data before calling `c.Set()`.
 
 ## Running locally
 

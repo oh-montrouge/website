@@ -123,7 +123,7 @@ func TestWidgetsIndex_ReturnsWidgets(t *testing.T) {
 
 ### Repository interfaces
 
-Handler structs declare their dependencies as interfaces defined in `services/repositories.go`. The production wiring in `app.go` passes the real model store; tests pass stubs. See `webapp/README.md` § Architecture conventions for the full rationale.
+Handler structs declare their dependencies as interfaces defined in `services/repositories.go`. The production wiring in `app.go` passes the real model store; tests pass stubs. See `webapp/architecture.md` for the full rationale.
 
 ---
 
