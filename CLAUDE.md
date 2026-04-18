@@ -1,6 +1,10 @@
 # Project Guardrails
 
-Project-specific constraints. Uses and extends the Tier 0–3 system defined in CORE.md.
+Project-specific constraints. Uses the Tier 0–3 system def:
+- Tier 0 — Hard Invariants (NEVER Violated)
+- Tier 1 — Epistemic Integrity (Suspended Only with Explicit Waiver)
+- Tier 2 — Process Quality (Best-Effort Under Pressure)
+- Tier 3 — Collaboration Quality (Degraded Gracefully)
 
 ---
 
