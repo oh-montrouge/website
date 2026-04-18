@@ -61,7 +61,16 @@ description = "Run full linter suite"
 dir = "webapp"
 run = "golangci-lint run ./..."
 
-# TODO: no prod infra yet — test when OVH VPS and Docker Compose prod setup are in place (Phase 2)
+[tasks.publish]
+description = "Build and push production Docker image — requires IMAGE_REPO in shell profile"
+run = """
+SHA=$(git rev-parse --short HEAD)
+docker build -t "${IMAGE_REPO}:latest" -t "${IMAGE_REPO}:${SHA}" .
+docker push "${IMAGE_REPO}:latest"
+docker push "${IMAGE_REPO}:${SHA}"
+echo "Published: ${IMAGE_REPO}:${SHA}"
+"""
+
 [tasks.deploy]
-description = "Deploy to production VPS via SSH"
-run = "ssh $DEPLOY_HOST 'cd /srv/ohm && docker compose pull && docker compose up -d && docker compose exec -T app buffalo pop migrate --path ../db/migrations'"
+description = "Deploy to production VPS via SSH — requires DEPLOY_HOST in shell profile"
+run = "ssh $DEPLOY_HOST 'cd /srv/ohm && git pull && docker compose pull && docker compose up -d && docker compose exec -T app buffalo-pop pop migrate --path db/migrations'"
