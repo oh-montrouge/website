@@ -8,6 +8,20 @@ Project-specific constraints. Uses the Tier 0–3 system def:
 
 ---
 
+## Component Architecture — Tier 2
+
+Every implementation task touching `webapp/` must:
+
+1. **Before implementing:** Read `webapp/architecture.md`. Verify the planned change
+   fits the component boundaries, service ownership, and interface contracts defined there.
+   If it doesn't fit, surface the conflict before writing code.
+
+2. **As part of DoD:** If the change introduces or modifies a service, repository interface,
+   DTO, handler file, or template directory — update `architecture.md` to reflect the new
+   state. A structural change without a corresponding doc update is incomplete.
+
+---
+
 ## Test Coverage — Tier 1
 
 Every file in `webapp/actions/`, `webapp/services/`, and `webapp/models/` that contains
