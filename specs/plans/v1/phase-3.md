@@ -51,18 +51,21 @@ Commands the deployer runs; each has a clear pass/fail output.
 
 **AC-M1 — Image is lean** *(local)*
 `docker build -t ohm-webapp .` succeeds. `docker image inspect ohm-webapp --format '{{.Size}}'`
-returns ≤ 35 MB. Confirms the multi-stage build is not carrying Go toolchain or dev
-dependencies into the runtime image.
+returns ≤ 90 MB. Confirms the multi-stage build is not carrying Go toolchain or dev
+dependencies into the runtime image. The ceiling is higher than a pure app image because
+`buffalo` and `buffalo-pop` are co-packaged for deployment migrations (see Dockerfile comment).
 
 **AC-M2 — App starts with production config** *(local)*
 `docker compose up` with a `.env` containing valid `DATABASE_URL`, `SESSION_SECRET`, and
 `GO_ENV=production` → container reaches healthy state; `curl -s -o /dev/null -w "%{http_code}"
-http://localhost:{port}/connexion` returns `200`.
+-H "X-Forwarded-Proto: https" http://localhost:{port}/connexion` returns `200`.
+Note: without the header, the app returns 301 (force-SSL redirect). In production, Caddy
+injects `X-Forwarded-Proto: https`, so the app serves 200 normally.
 
 **AC-M3 — Deploy runs migrations** *(production)*
-After `mise run deploy` on a VPS with a pending migration, `buffalo pop migrate status`
-shows all migrations as applied. Confirms the deploy task runs `buffalo pop migrate`
-after pulling the image.
+After `mise run deploy` on a VPS with a pending migration,
+`docker compose exec app buffalo-pop pop migrate status` shows all migrations as applied.
+Confirms the deploy task runs `buffalo-pop pop migrate` after pulling the image.
 
 **AC-M4 — HTTPS is live** *(production)*
 `curl -I https://{domain}/connexion` returns `HTTP/2 200` with no certificate errors.
