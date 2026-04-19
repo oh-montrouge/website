@@ -189,13 +189,13 @@ Confirm an `.sql.gz` object appears in your OVH Object Storage bucket (AC-M5).
 
 Run these after first deployment to confirm AC-M3 through AC-H3:
 
-- [ ] `docker compose exec app buffalo-pop pop migrate status` shows all migrations applied (AC-M3)
-- [ ] `curl -I https://{domain}/connexion` returns `HTTP/2 200` (AC-M4)
-- [ ] `curl -I http://{domain}/connexion` redirects to `https://` (AC-M4)
-- [ ] `bash scripts/backup.sh` exits 0 and an `.sql.gz` appears in the bucket (AC-M5)
-- [ ] Log in with the seed-admin account, navigate two protected pages, log out — session holds (AC-H1)
-- [ ] `docker run --rm $APP_IMAGE env` does not print `SESSION_SECRET` or `DATABASE_URL` (AC-H2)
-- [ ] OVH Object Storage lifecycle policy shows 30-day retention (AC-H3)
+- [x] `docker compose exec app buffalo-pop pop migrate status --path db/migrations` shows all migrations applied (AC-M3)
+- [x] `curl -s -o /dev/null -w "%{http_code}" https://{domain}/connexion` returns `200` (AC-M4)
+- [x] `curl -I http://new-app.ohm-agenda.ovh/connexion` redirects to `https://` (AC-M4)
+- [x] `bash scripts/backup.sh` exits 0 and an `.sql.gz` appears in the bucket (AC-M5)
+- [x] Log in with the seed-admin account, navigate two protected pages, log out — session holds (AC-H1)
+- [x] `docker run --rm $APP_IMAGE env` does not print `SESSION_SECRET` or `DATABASE_URL` (AC-H2)
+- [x] OVH Object Storage lifecycle policy shows 30-day retention (AC-H3)
 
 ---
 

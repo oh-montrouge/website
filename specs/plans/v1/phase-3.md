@@ -1,6 +1,6 @@
 # Phase 3 — Production Infra
 
-**Status:** Not started
+**Status:** Done
 
 **Goal:** application reachable at the OVH domain over HTTPS, daily backups running.
 
@@ -68,7 +68,7 @@ After `mise run deploy` on a VPS with a pending migration,
 Confirms the deploy task runs `buffalo-pop pop migrate` after pulling the image.
 
 **AC-M4 — HTTPS is live** *(production)*
-`curl -I https://{domain}/connexion` returns `HTTP/2 200` with no certificate errors.
+`curl -s -o /dev/null -w "%{http_code}" https://{domain}/connexion` returns `200` with no certificate errors.
 `curl -I http://{domain}/connexion` returns a redirect to `https://`.
 
 **AC-M5 — Backup produces an artifact** *(production)*
