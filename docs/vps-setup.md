@@ -10,6 +10,13 @@ On the VPS, install:
 - Docker Engine (v24+) and the Compose plugin — https://docs.docker.com/engine/install/ubuntu/
 - AWS CLI v2 (used by the backup script) — https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 
+After installing Docker, add the deploy user to the `docker` group and re-login so the membership takes effect:
+```sh
+sudo usermod -aG docker "$USER"
+# Log out and back in, then verify:
+docker info
+```
+
 On your local machine:
 - See "Local shell profile" section below for required environment variables.
 
@@ -68,8 +75,8 @@ Create `/srv/ohm/.env.backup` for the backup script (not committed, separate fro
 cat > /srv/ohm/.env.backup << 'EOF'
 POSTGRES_USER=ohm
 POSTGRES_DB=ohm_production
-BACKUP_BUCKET=your-bucket-name
-OVH_S3_ENDPOINT=https://s3.<region>.io.cloud.ovh.net
+BACKUP_BUCKET=ohm-website
+OVH_S3_ENDPOINT=https://s3.eu-west-par.io.cloud.ovh.net
 AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_ACCESS_KEY=your_secret_key
 EOF
@@ -89,28 +96,42 @@ In the OVH console:
 
 ## Local shell profile (required for deploy tooling)
 
-Add these to `~/.bashrc` or `~/.zshrc` on your local machine:
+`DEPLOY_HOST` and `IMAGE_REPO` are already set in `mise.toml` — no local config needed for those.
 
-```sh
-export DEPLOY_HOST=<user>@<vps-ip>          # SSH target for mise run deploy
-export IMAGE_REPO=ghcr.io/<org>/ohm-webapp  # Docker image repo for mise run publish
-```
+You only need a `GITHUB_TOKEN` to push images to the GitHub Container Registry.
 
-Alternatively, those two variables can be set in a `mise.local.toml` file, containing:
+**Create a GitHub classic token:**
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token (classic)"
+3. Select scope: `write:packages` (includes `read:packages`)
+4. Copy the token
+
+Export it in your shell profile (`~/.bashrc`, `~/.zshrc`, or a `mise.local.toml`):
+
 ```toml
+# mise.local.toml (gitignored — safe for secrets)
 [env]
-DEPLOY_HOST="<user>@<vps-ip> "
-IMAGE_REPO="ghcr.io/<org>/ohm-webapp "
+GITHUB_TOKEN = "ghp_your_token_here"
 ```
 
-Log in to the registry once (GitHub Container Registry example):
+Log in to the registry once:
 ```sh
-echo $GITHUB_TOKEN | docker login ghcr.io -u <username> --password-stdin
+echo $GITHUB_TOKEN | docker login ghcr.io -u <your-github-username> --password-stdin
 ```
 
 ---
 
 ## First deployment
+
+**Container image visibility:** `mise run deploy` pulls the image from ghcr.io on the VPS.
+
+- **Public image (current default):** no VPS authentication needed. Make the package public on GitHub:
+  `github.com/oh-montrouge` → Packages → `website` → Package settings → Change visibility → Public.
+- **Private image:** the VPS must log in to ghcr.io before pulling. Run once on the VPS:
+  ```sh
+  echo "your_github_token" | docker login ghcr.io -u your-github-username --password-stdin
+  ```
+  Use a classic token with `read:packages` scope (the same token from the "Local shell profile" section works).
 
 ```sh
 # On your local machine — build, tag, and push the image
@@ -120,26 +141,26 @@ mise run publish
 mise run deploy
 ```
 
-The deploy task SSHes into the VPS and runs:
-```sh
-cd /srv/ohm && docker compose pull && docker compose up -d && \
-  docker compose exec -T app buffalo-pop pop migrate --path db/migrations
-```
-
 ---
 
 ## Bootstrap the admin account
 
-```sh
-# On the VPS
-cd /srv/ohm
-docker compose exec app buffalo task db:seed:admin
+Add credentials to `mise.local.toml` (gitignored):
+
+```toml
+[env]
+ADMIN_EMAIL = "your@email.com"
+ADMIN_PASSWORD = "a-strong-password"
 ```
 
-Or via Mise from your local machine (requires DEPLOY_HOST set):
+Then from your local machine:
+
 ```sh
-ssh $DEPLOY_HOST 'cd /srv/ohm && docker compose exec -T app buffalo task db:seed:admin'
+mise run seed-admin
 ```
+
+The task hashes the password with argon2id locally, generates a SQL file, uploads it to the
+VPS, and runs it against postgres directly — no app binary involved.
 
 ---
 
@@ -168,13 +189,13 @@ Confirm an `.sql.gz` object appears in your OVH Object Storage bucket (AC-M5).
 
 Run these after first deployment to confirm AC-M3 through AC-H3:
 
-- [ ] `docker compose exec app buffalo-pop pop migrate status` shows all migrations applied (AC-M3)
-- [ ] `curl -I https://{domain}/connexion` returns `HTTP/2 200` (AC-M4)
-- [ ] `curl -I http://{domain}/connexion` redirects to `https://` (AC-M4)
-- [ ] `bash scripts/backup.sh` exits 0 and an `.sql.gz` appears in the bucket (AC-M5)
-- [ ] Log in with the seed-admin account, navigate two protected pages, log out — session holds (AC-H1)
-- [ ] `docker run --rm $APP_IMAGE env` does not print `SESSION_SECRET` or `DATABASE_URL` (AC-H2)
-- [ ] OVH Object Storage lifecycle policy shows 30-day retention (AC-H3)
+- [x] `docker compose exec app buffalo-pop pop migrate status --path db/migrations` shows all migrations applied (AC-M3)
+- [x] `curl -s -o /dev/null -w "%{http_code}" https://{domain}/connexion` returns `200` (AC-M4)
+- [x] `curl -I http://new-app.ohm-agenda.ovh/connexion` redirects to `https://` (AC-M4)
+- [x] `bash scripts/backup.sh` exits 0 and an `.sql.gz` appears in the bucket (AC-M5)
+- [x] Log in with the seed-admin account, navigate two protected pages, log out — session holds (AC-H1)
+- [x] `docker run --rm $APP_IMAGE env` does not print `SESSION_SECRET` or `DATABASE_URL` (AC-H2)
+- [x] OVH Object Storage lifecycle policy shows 30-day retention (AC-H3)
 
 ---
 
@@ -254,18 +275,18 @@ cat ~/.ssh/id_ed25519.pub
 echo "<their-public-key>" >> ~/.ssh/authorized_keys
 ```
 
-**4. New deployer sets local shell vars:**
-```sh
-# Add to ~/.bashrc or ~/.zshrc
-export DEPLOY_HOST=<user>@<vps-ip>          # ask the VPS admin
-export IMAGE_REPO=ghcr.io/<org>/ohm-webapp  # same value as the current team
-```
+**4. Create a GitHub classic token:**
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token (classic)"
+3. Select scope: `write:packages` (includes `read:packages`)
+4. Copy the token
 
-Alternatively, those two variables can be set in a `mise.local.toml` file, containing:
+Export it in your shell profile (`~/.bashrc`, `~/.zshrc`, or a `mise.local.toml`):
+
 ```toml
+# mise.local.toml (gitignored — safe for secrets)
 [env]
-DEPLOY_HOST="<user>@<vps-ip> "
-IMAGE_REPO="ghcr.io/<org>/ohm-webapp "
+GITHUB_TOKEN = "ghp_your_token_here"
 ```
 
 **5. Log in to the Docker registry:**
