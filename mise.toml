@@ -77,4 +77,4 @@ echo "Published: ${IMAGE_REPO}:${SHA}"
 
 [tasks.deploy]
 description = "Deploy to production VPS via SSH — requires DEPLOY_HOST in shell profile"
-run = "ssh $DEPLOY_HOST 'cd /srv/ohm && git pull && docker compose pull && docker compose up -d && docker compose exec -T app buffalo-pop pop migrate --path db/migrations'"
+run = "ssh $DEPLOY_HOST 'cd /srv/ohm && git pull && docker compose pull && docker compose run --rm app buffalo-pop pop migrate --path db/migrations && docker compose up -d'"

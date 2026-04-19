@@ -10,6 +10,13 @@ On the VPS, install:
 - Docker Engine (v24+) and the Compose plugin — https://docs.docker.com/engine/install/ubuntu/
 - AWS CLI v2 (used by the backup script) — https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 
+After installing Docker, add the deploy user to the `docker` group and re-login so the membership takes effect:
+```sh
+sudo usermod -aG docker "$USER"
+# Log out and back in, then verify:
+docker info
+```
+
 On your local machine:
 - See "Local shell profile" section below for required environment variables.
 
@@ -115,6 +122,16 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u <your-github-username> --password-s
 ---
 
 ## First deployment
+
+**Container image visibility:** `mise run deploy` pulls the image from ghcr.io on the VPS.
+
+- **Public image (current default):** no VPS authentication needed. Make the package public on GitHub:
+  `github.com/oh-montrouge` → Packages → `website` → Package settings → Change visibility → Public.
+- **Private image:** the VPS must log in to ghcr.io before pulling. Run once on the VPS:
+  ```sh
+  echo "your_github_token" | docker login ghcr.io -u your-github-username --password-stdin
+  ```
+  Use a classic token with `read:packages` scope (the same token from the "Local shell profile" section works).
 
 ```sh
 # On your local machine — build, tag, and push the image
