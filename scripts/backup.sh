@@ -6,7 +6,7 @@ set -eu
 ENV_FILE="/srv/ohm/.env.backup"
 if [ -f "$ENV_FILE" ]; then
     # shellcheck disable=SC1090
-    . "$ENV_FILE"
+    set -a; . "$ENV_FILE"; set +a
 fi
 
 TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
