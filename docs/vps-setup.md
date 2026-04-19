@@ -68,8 +68,8 @@ Create `/srv/ohm/.env.backup` for the backup script (not committed, separate fro
 cat > /srv/ohm/.env.backup << 'EOF'
 POSTGRES_USER=ohm
 POSTGRES_DB=ohm_production
-BACKUP_BUCKET=your-bucket-name
-OVH_S3_ENDPOINT=https://s3.<region>.io.cloud.ovh.net
+BACKUP_BUCKET=ohm-website
+OVH_S3_ENDPOINT=https://s3.eu-west-par.io.cloud.ovh.net
 AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_ACCESS_KEY=your_secret_key
 EOF
@@ -89,23 +89,27 @@ In the OVH console:
 
 ## Local shell profile (required for deploy tooling)
 
-Add these to `~/.bashrc` or `~/.zshrc` on your local machine:
+`DEPLOY_HOST` and `IMAGE_REPO` are already set in `mise.toml` — no local config needed for those.
 
-```sh
-export DEPLOY_HOST=<user>@<vps-ip>          # SSH target for mise run deploy
-export IMAGE_REPO=ghcr.io/<org>/ohm-webapp  # Docker image repo for mise run publish
-```
+You only need a `GITHUB_TOKEN` to push images to the GitHub Container Registry.
 
-Alternatively, those two variables can be set in a `mise.local.toml` file, containing:
+**Create a GitHub classic token:**
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token (classic)"
+3. Select scope: `write:packages` (includes `read:packages`)
+4. Copy the token
+
+Export it in your shell profile (`~/.bashrc`, `~/.zshrc`, or a `mise.local.toml`):
+
 ```toml
+# mise.local.toml (gitignored — safe for secrets)
 [env]
-DEPLOY_HOST="<user>@<vps-ip> "
-IMAGE_REPO="ghcr.io/<org>/ohm-webapp "
+GITHUB_TOKEN = "ghp_your_token_here"
 ```
 
-Log in to the registry once (GitHub Container Registry example):
+Log in to the registry once:
 ```sh
-echo $GITHUB_TOKEN | docker login ghcr.io -u <username> --password-stdin
+echo $GITHUB_TOKEN | docker login ghcr.io -u <your-github-username> --password-stdin
 ```
 
 ---
@@ -118,12 +122,6 @@ mise run publish
 
 # Deploy (SSH → pull → up → migrate)
 mise run deploy
-```
-
-The deploy task SSHes into the VPS and runs:
-```sh
-cd /srv/ohm && docker compose pull && docker compose up -d && \
-  docker compose exec -T app buffalo-pop pop migrate --path db/migrations
 ```
 
 ---
@@ -254,18 +252,18 @@ cat ~/.ssh/id_ed25519.pub
 echo "<their-public-key>" >> ~/.ssh/authorized_keys
 ```
 
-**4. New deployer sets local shell vars:**
-```sh
-# Add to ~/.bashrc or ~/.zshrc
-export DEPLOY_HOST=<user>@<vps-ip>          # ask the VPS admin
-export IMAGE_REPO=ghcr.io/<org>/ohm-webapp  # same value as the current team
-```
+**4. Create a GitHub classic token:**
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token (classic)"
+3. Select scope: `write:packages` (includes `read:packages`)
+4. Copy the token
 
-Alternatively, those two variables can be set in a `mise.local.toml` file, containing:
+Export it in your shell profile (`~/.bashrc`, `~/.zshrc`, or a `mise.local.toml`):
+
 ```toml
+# mise.local.toml (gitignored — safe for secrets)
 [env]
-DEPLOY_HOST="<user>@<vps-ip> "
-IMAGE_REPO="ghcr.io/<org>/ohm-webapp "
+GITHUB_TOKEN = "ghp_your_token_here"
 ```
 
 **5. Log in to the Docker registry:**

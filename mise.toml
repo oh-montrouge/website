@@ -1,6 +1,10 @@
 [settings]
 experimental = true
 
+[env]
+DEPLOY_HOST = "debian@162.19.137.193"
+IMAGE_REPO = "ghcr.io/oh-montrouge/website"
+
 [tools]
 go = "1.26.2"
 "go:github.com/gobuffalo/cli/cmd/buffalo" = "v0.18.14"
