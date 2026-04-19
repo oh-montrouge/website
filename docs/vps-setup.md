@@ -145,16 +145,22 @@ mise run deploy
 
 ## Bootstrap the admin account
 
-```sh
-# On the VPS
-cd /srv/ohm
-docker compose exec app buffalo task db:seed:admin
+Add credentials to `mise.local.toml` (gitignored):
+
+```toml
+[env]
+ADMIN_EMAIL = "your@email.com"
+ADMIN_PASSWORD = "a-strong-password"
 ```
 
-Or via Mise from your local machine (requires DEPLOY_HOST set):
+Then from your local machine:
+
 ```sh
-ssh $DEPLOY_HOST 'cd /srv/ohm && docker compose exec -T app buffalo task db:seed:admin'
+mise run seed-admin
 ```
+
+The task hashes the password with argon2id locally, generates a SQL file, uploads it to the
+VPS, and runs it against postgres directly — no app binary involved.
 
 ---
 

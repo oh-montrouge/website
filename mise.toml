@@ -40,9 +40,37 @@ dir = "webapp"
 run = "buffalo pop migrate --path ../db/migrations"
 
 [tasks.seed-admin]
-description = "Create first admin account (bootstrap; refuses if one already exists)"
-dir = "webapp"
-run = "buffalo task db:seed:admin"
+description = "Bootstrap first admin account in production — set ADMIN_EMAIL and ADMIN_PASSWORD in mise.local.toml"
+run = """
+HASH=$(cd scripts/hash-password && go run main.go "$ADMIN_PASSWORD")
+SAFE_EMAIL=$(printf '%s' "$ADMIN_EMAIL" | sed "s/'/''/g")
+TMPFILE=$(mktemp /tmp/seed-admin.XXXX.sql)
+cat > "$TMPFILE" <<ENDSQL
+DO \\$seed\\$
+DECLARE
+  v_instrument_id BIGINT;
+  v_role_id       BIGINT;
+  v_account_id    BIGINT;
+BEGIN
+  SELECT id INTO v_instrument_id FROM instruments ORDER BY id LIMIT 1;
+  SELECT id INTO v_role_id FROM roles WHERE name = 'admin';
+  INSERT INTO accounts (email, password_hash, main_instrument_id, status)
+    VALUES ('$SAFE_EMAIL', '$HASH', v_instrument_id, 'active')
+    RETURNING id INTO v_account_id;
+  INSERT INTO account_roles (account_id, role_id) VALUES (v_account_id, v_role_id);
+  RAISE NOTICE 'Admin account created: %', '$SAFE_EMAIL';
+END
+\\$seed\\$;
+ENDSQL
+scp "$TMPFILE" "$DEPLOY_HOST:/tmp/seed-admin.sql"
+rm "$TMPFILE"
+ssh "$DEPLOY_HOST" 'cd /srv/ohm && cat /tmp/seed-admin.sql | docker compose exec -T postgres psql -U ohm ohm_production && rm /tmp/seed-admin.sql'
+"""
+
+[tasks.hash-password]
+description = "Generate an argon2id hash for a plaintext password — usage: mise run hash-password -- <password>"
+dir = "scripts/hash-password"
+run = "go run main.go $@"
 
 [tasks.recover-admin]
 description = "Emergency: force-reset an active account password directly in the DB"
