@@ -94,8 +94,9 @@ dependency wired.
 
 - Event list for authenticated users (`/evenements`): past 30 days + all upcoming, own
   RSVP state shown
-- Event detail page: full RSVP list; for concerts, instrument per `yes` RSVP; for
+- Event detail page: pupitre headcounts; full RSVP list; for concerts, instrument per `yes` RSVP; for
   `other`, field responses per `yes` RSVP
+- Admin are able to modify RSVP for other accounts
 - RSVP update (`/evenements/{id}/rsvp`): yes/no/maybe; instrument selection for concerts
   (main instrument pre-selected); response clearing on transition away from yes
 - Admin event management list (`/admin/evenements`)

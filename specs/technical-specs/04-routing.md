@@ -46,7 +46,7 @@ redirects to `/connexion` otherwise.
 |--------|------|---------|
 | GET | `/profil` | Own profile (read-only in V1) |
 | GET | `/evenements` | Event list with own RSVP state (last 30 days + all upcoming; see [Events and RSVP](../functional-specs/05-events-and-rsvp.md#event-list-view)) |
-| GET | `/evenements/{id}` | Event detail, full RSVP list, own RSVP form |
+| GET | `/evenements/{id}` | Event detail, by-instrument presence table, full RSVP list, own RSVP form |
 | POST | `/evenements/{id}/rsvp` | Update own RSVP state (and instrument if concert) |
 
 ### Admin (active account + admin role required)
