@@ -25,7 +25,7 @@ script = "mise prepare"
 [tasks.dev]
 description = "Start local environment (postgres in Docker + buffalo dev)"
 dir = "webapp"
-run = "docker compose up -d --wait postgres && buffalo dev"
+run = "docker compose up -d --wait postgres && buffalo pop migrate --path ../db/migrations && buffalo dev"
 
 [tasks.stop]
 description = "Stop the local development environment (postgres + buffalo dev)"
@@ -34,10 +34,14 @@ run = """
 docker compose stop
 pkill -f ohm-build || true
 """
-[tasks.migrate]
-description = "Apply pending DB migrations"
+
+[tasks.kill]
+description = "Stop the local development environment (postgres + buffalo dev)"
 dir = "webapp"
-run = "buffalo pop migrate --path ../db/migrations"
+run = """
+docker compose down -v
+pkill -f ohm-build || true
+"""
 
 [tasks.seed-admin]
 description = "Bootstrap first admin account in production — set ADMIN_EMAIL and ADMIN_PASSWORD in mise.local.toml"
@@ -72,16 +76,16 @@ description = "Generate an argon2id hash for a plaintext password — usage: mis
 dir = "scripts/hash-password"
 run = "go run main.go $@"
 
-[tasks.recover-admin]
-description = "Emergency: force-reset an active account password directly in the DB"
-dir = "webapp"
-run = "buffalo task db:recover:admin"
-
-# TODO: not yet implemented — test when grift task db:seed:dev is written (Phase 3)
 [tasks.seed-dev]
-description = "Populate dev DB with dummy data (local only)"
+description = """
+Populate dev DB with dummy data (local only). Idempotent — truncates and re-seeds on each run.
+Default password for all accounts: devpassword
+"""
 dir = "webapp"
-run = "buffalo task db:seed:dev"
+run = """
+docker compose exec -T postgres psql -U ohm ohm_development < ../db/dummy-data/01_accounts.sql
+docker compose exec -T postgres psql -U ohm ohm_development < ../db/dummy-data/02_account_roles.sql
+"""
 
 [tasks.test]
 description = "Run test suite — Docker daemon must be running (testcontainers manages its own postgres)"

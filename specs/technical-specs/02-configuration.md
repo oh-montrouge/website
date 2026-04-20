@@ -58,12 +58,10 @@ running. Never exposed as an HTTP endpoint.
 
 ## Development Seed Data
 
-A separate grift task populates the local database with realistic dummy data for development:
-several musicians in varied states (pending, active), a current season, past seasons, events
-of each type with RSVPs, and fee payment records.
-
-**Implementation:** `grifts/db.go`, invoked via `mise run seed-dev` (wraps
-`buffalo task db:seed:dev`).
+SQL scripts under `db/dummy-data/` populate the local database with realistic dummy data for
+development. Invoked via `mise run seed-dev`. Idempotent — truncates and re-seeds on each run.
+Grows with the schema: accounts and roles are seeded now; seasons, events, RSVPs, and fee
+payment records will be added as those phases land.
 
 **Usage context:** Local development only. Never run against production.
 

@@ -101,7 +101,8 @@ another service.
   phone/address if consented, static consent-withdrawal notice
 - Retention review list (`/admin/retention`): accounts whose last-payment season ended
   > 5 years ago
-- `seed-dev` grift task (implement once schema is complete enough to generate realistic data)
+- Extend `db/dummy-data/` with richer account data: birth dates, phone/address with consent
+  on some accounts, at least one under-15 account with parental consent URI
 
 ---
 

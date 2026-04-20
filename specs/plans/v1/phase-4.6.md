@@ -106,6 +106,8 @@ dependency wired.
   `choice` type), edit field (blocked if responses exist), delete field (blocked if responses
   exist)
 - RSVP on account activation: seed records for future events (inside invite flow transaction)
+- Extend `db/dummy-data/` with event and RSVP seed data: one past and one upcoming event
+  of each type, with varied RSVP states across accounts
 
 ---
 

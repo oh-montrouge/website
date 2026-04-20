@@ -60,6 +60,7 @@ See `webapp/architecture.md` for full detail.
 - Season list (`/admin/saisons`) with inline creation form
 - Create season (label, start date, end date; not automatically designated current)
 - Designate current season (atomic swap transaction; exactly-one invariant maintained)
+- Extend `db/dummy-data/` with season seed data: one current season and one past season
 
 ---
 

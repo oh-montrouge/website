@@ -66,6 +66,8 @@ as implemented.
 - Delete fee payment
 - First inscription date: derived on demand (`MIN(payment_date)`), shown in admin
   musician detail view
+- Extend `db/dummy-data/` with fee payment seed data: payment records spread across
+  accounts and seasons, including at least one account with no payments (retention case)
 
 ---
 

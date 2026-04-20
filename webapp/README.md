@@ -28,14 +28,8 @@ they can be run by any SQL-capable tool.
 
 ## Running locally
 
-From the repo root, use `mise run dev`. To run Buffalo commands directly from this
-directory:
-
-```bash
-cd webapp
-buffalo dev          # Dev server with live reload
-buffalo pop migrate --path ../db/migrations   # Run migrations manually
-```
+From the repo root, use `mise run dev`.
+Then, you can seed some dummy data with `mise run seed-dev`.
 
 ## Environment variables
 
