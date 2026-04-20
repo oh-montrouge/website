@@ -1,0 +1,171 @@
+/* OHM Wireframes — Design Tokens
+ * Drawn from the logo: deep bordeaux + antique gold on warm off-white.
+ * Hi-fi wireframe: structural first, color restrained. */
+
+:root {
+  /* Brand */
+  --ohm-bordeaux: #8b1e3f;
+  --ohm-bordeaux-ink: #6a1530;
+  --ohm-bordeaux-50: #fbeef2;
+  --ohm-bordeaux-100: #f4dae2;
+  --ohm-gold: #bca15d;
+  --ohm-gold-ink: #8c7536;
+  --ohm-gold-50: #faf4e3;
+  --ohm-gold-100: #f0e5c4;
+
+  /* Neutrals — warm, slightly creamy */
+  --paper: #fbfaf7;
+  --paper-2: #f4f1ea;
+  --paper-3: #ece7dc;
+  --line: #d9d2c1;
+  --line-strong: #b9b09a;
+  --ink: #1c1a15;
+  --ink-2: #3a362d;
+  --ink-3: #6b6658;
+  --ink-4: #8a8576;
+  --ink-5: #a39e8d;
+
+  /* Semantic */
+  --ok: #2f7d5b;
+  --ok-bg: #e3f0e8;
+  --warn: #a46a1f;
+  --warn-bg: #f6ead1;
+  --danger: #a8321e;
+  --danger-bg: #f5ddd6;
+  --info: #1f5a7a;
+  --info-bg: #dbe8ef;
+
+  /* Type scale */
+  --font-serif: "Cormorant Garamond", "EB Garamond", Georgia, serif;
+  --font-sans: "Inter Tight", "Söhne", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-15: 15px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-28: 28px;
+  --fs-32: 32px;
+  --fs-40: 40px;
+  --fs-56: 56px;
+
+  /* Spacing — 4px base */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+
+  /* Radius */
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 10px;
+  --r-pill: 999px;
+
+  /* Shadow — subtle, structural */
+  --shadow-1: 0 1px 0 rgba(28,26,21,.04), 0 1px 2px rgba(28,26,21,.06);
+  --shadow-2: 0 2px 4px rgba(28,26,21,.06), 0 8px 24px rgba(28,26,21,.08);
+  --shadow-3: 0 12px 32px rgba(28,26,21,.12);
+
+  /* Layout */
+  --header-h: 64px;
+  --content-max: 1120px;
+}
+
+[data-density="compact"] {
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 20px;
+  --sp-8: 24px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-15);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,h2,h3,h4,h5 { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.01em; margin: 0; color: var(--ink); }
+h1 { font-size: var(--fs-40); line-height: 1.1; }
+h2 { font-size: var(--fs-28); line-height: 1.15; }
+h3 { font-size: var(--fs-20); line-height: 1.25; }
+h4 { font-size: var(--fs-16); line-height: 1.3; font-family: var(--font-sans); font-weight: 600; letter-spacing: 0; }
+
+a { color: var(--ohm-bordeaux); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button { font: inherit; cursor: pointer; }
+input, select, textarea { font: inherit; color: inherit; }
+
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.mono { font-family: var(--font-mono); font-size: 12px; }
+
+/* Annotation chips — unobtrusive spec callouts */
+.spec-note {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  background: var(--ohm-gold-50);
+  border: 1px dashed var(--ohm-gold);
+  padding: 2px 6px;
+  border-radius: var(--r-2);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+.spec-note::before {
+  content: "§ ";
+  color: var(--ohm-gold-ink);
+  font-weight: 700;
+}
+
+/* Page frame used by the prototype */
+.viewport {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+.viewport--mobile {
+  max-width: 390px;
+  margin: 0 auto;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  min-height: 844px;
+}
+
+.stack { display: flex; flex-direction: column; }
+.stack > * + * { margin-top: var(--gap, var(--sp-4)); }
+.row { display: flex; align-items: center; gap: var(--gap, var(--sp-3)); }
+.grow { flex: 1; }
+
+.muted { color: var(--ink-3); }
+.dim { color: var(--ink-4); }

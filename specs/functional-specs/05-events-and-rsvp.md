@@ -107,8 +107,11 @@ All authenticated users can view the full RSVP list for any event.
 
 **For all event types:**
 - Each account's name and RSVP state (`yes` / `no` / `maybe` / `unanswered`) is shown.
+- Admin can modify RSVP state for other accounts.
+- Filters: Filter by instrument played for this concert (eventType=concert only), Filter by RSVP state (oui / peut-être / non / sans rép.), Search by name, Quick chip: "Sans réponse" (highlight who hasn't answered)
 
 **For `concert` events additionally:**
+- Pupitre headcount table on the event page, above the musicians list. Rows per instrument × Présents / Peut-être / Absents / Sans rép., with a Total row.
 - For each account with state `yes`: the selected instrument is shown alongside their name.
 
 **For `other` events with custom fields:**

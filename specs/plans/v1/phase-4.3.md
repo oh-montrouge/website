@@ -25,6 +25,26 @@ Depends on: Phase 4.2
 
 ---
 
+## Design Reference
+
+Wireframe screens: `AdminMusiciansScreen`, `AdminMusicianDetailScreen`,
+`AdminMusicianNewScreen`, and modals `InviteLinkModal`, `AnonymizeModal`,
+`LastAdminBlockModal` (`admin-musicians.jsx`).
+Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+
+**Alpine.js usage in this phase — three modal dialogs on the musician detail page:**
+
+All modals use the same `x-data="{ open: false }"` + `x-show="open"` pattern on a
+`<dialog>` element:
+
+| Modal | Trigger | Notes |
+|-------|---------|-------|
+| Invite link | "Voir / régénérer le lien" button | Displays copyable URL; "Régénérer" submits a form POST |
+| Anonymize confirm | "Anonymiser (RGPD)" button | Typed confirmation: `x-data="{ open: false, typed: '' }"`; `x-bind:disabled="typed !== 'ANONYMISER'"` on the confirm button |
+| Last-admin block | Role revoke / anonymize when last admin | Informational only; no state changes |
+
+---
+
 ## Architecture
 
 See `webapp/architecture.md` for full detail. Key points:

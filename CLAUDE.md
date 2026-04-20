@@ -39,3 +39,9 @@ WAIVER: test coverage — [file] — [reason] — [payback trigger]
 Record in `TECH_DEBT.md`.
 
 See `webapp/TESTING.md` for stub patterns, test app setup, and the integration test harness.
+
+---
+
+# Design references
+
+Some plans may refer to a design (wireframes). Those are guidelines, not hard constraints. If the implementation sounds too complexe, stop and ask.

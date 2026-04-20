@@ -25,6 +25,30 @@ Depends on: Phase 4.3 (accounts must exist for RSVP seeding)
 
 ---
 
+## Design Reference
+
+Wireframe screens: `EventListScreen`, `EventDetailScreen` (concert / rehearsal / other
+variants), `PupitreTable`, `AdminEventsScreen`, `AdminEventEditScreen`,
+`AdminRetentionScreen` (`musician.jsx`, `admin-other.jsx`).
+Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+
+**Alpine.js usage in this phase (most Alpine-intensive phase):**
+
+| Behavior | Pattern |
+|----------|---------|
+| RSVP name search | `x-data` on the RSVP card; `x-show` on each row driven by `searchQ` string |
+| RSVP filter chips (all / yes / no / maybe / unanswered) | `filterState` in same `x-data`; chip `@click` sets it |
+| Pupitre click-to-filter (concerts only) | `filterInstrument` in same `x-data`; row `x-show` checks it |
+| RSVP sidebar radio pills (own response) | `x-data="{ rsvp: '{{current_state}}' }"` seeded from server-rendered value |
+| Admin inline RSVP edit | `x-data` holds per-row state seeded from server HTML; button `@click` fires `fetch()` `PATCH /evenements/:id/rsvp/:musician_id`; reverts local state on error |
+| Event type change warning (admin edit form) | `x-data="{ type: '{{original_type}}' }"` on the form; `x-show` on the warning alert when current type differs from original |
+
+**RSVP PATCH endpoint:** per ADR 008, this is the only non-HTML JSON endpoint in V1.
+Returns `{ "ok": true }` on success. It is session-authenticated and CSRF-protected
+identically to form POSTs; it is not a public API.
+
+---
+
 ## Architecture
 
 See `webapp/architecture.md` for full detail. Key points:
@@ -94,8 +118,9 @@ dependency wired.
 
 - Event list for authenticated users (`/evenements`): past 30 days + all upcoming, own
   RSVP state shown
-- Event detail page: full RSVP list; for concerts, instrument per `yes` RSVP; for
+- Event detail page: pupitre headcounts; full RSVP list; for concerts, instrument per `yes` RSVP; for
   `other`, field responses per `yes` RSVP
+- Admin are able to modify RSVP for other accounts
 - RSVP update (`/evenements/{id}/rsvp`): yes/no/maybe; instrument selection for concerts
   (main instrument pre-selected); response clearing on transition away from yes
 - Admin event management list (`/admin/evenements`)
