@@ -20,6 +20,16 @@ pre-commit:
       run: go mod tidy && git diff --exit-code go.mod go.sum
       fail_text: "go.mod/go.sum out of sync — run: go mod tidy from webapp/"
 
+pre-push:
+  commands:
+    no-main-push:
+      run: |
+        current=$(git branch --show-current)
+        if [ "$current" = "main" ]; then
+          echo "Direct push to main is not allowed. Use a pull request."
+          exit 1
+        fi
+
 commit-msg:
   commands:
     conventional:
