@@ -21,6 +21,32 @@ Depends on: Phase 2
 
 ---
 
+## Design Reference
+
+Wireframe screens: `HomeScreen`, `LoginScreen`, `PrivacyScreen` (`public.jsx`); `AppBar`,
+`Footer` (`shared.jsx`); design tokens (`styles/tokens.css`); component styles
+(`styles/components.css`).
+Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+
+**Alpine.js setup — establish here, used in all subsequent phases:**
+
+This phase creates `templates/layouts/application.plush.html`. Vendor Alpine.js as part of
+this phase:
+1. Download `alpine.min.js` from the Alpine.js GitHub releases page
+2. Place at `public/assets/alpine.min.js`
+3. Add to the layout `<head>`:
+   ```html
+   <!-- alpine.js vX.Y.Z — update specs/technical-specs/03-stack.md when upgrading -->
+   <script defer src="/assets/alpine.min.js"></script>
+   ```
+   Replace `vX.Y.Z` with the exact version downloaded. Update `03-stack.md` to record it.
+
+**Alpine.js usage in this phase:**
+- Mobile nav drawer: `x-data="{ menuOpen: false }"` on the `<header>`; `x-show="menuOpen"`
+  on the drawer panel; `@click="menuOpen = !menuOpen"` on the `☰` button
+
+---
+
 ## Architecture
 
 No new services, repository interfaces, or DTOs.
@@ -48,6 +74,8 @@ No new services, repository interfaces, or DTOs.
   - Authenticated: events, profile, sheet music (if configured), logout
 - Footer with persistent privacy notice link (all pages)
 - `SHEET_MUSIC_URL` env var wired to show/hide "Partitions" menu item
+- Alpine.js vendored to `public/assets/alpine.min.js`; version pinned in layout `<head>` comment
+- Mobile nav drawer (hamburger toggles nav on small screens via Alpine)
 
 ---
 

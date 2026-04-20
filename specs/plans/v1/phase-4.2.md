@@ -25,6 +25,18 @@ Depends on: Phase 2
 
 ---
 
+## Design Reference
+
+Wireframe screens: `InviteScreen` (active and expired states), `PasswordResetScreen`
+(`public.jsx`).
+Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+
+**Alpine.js usage in this phase:**
+- Invite form submit gate: `x-data="{ consentPrivacy: false }"` on the `<form>`; `x-model`
+  on the privacy checkbox; `x-bind:disabled="!consentPrivacy"` on the submit button
+
+---
+
 ## Architecture
 
 See `webapp/architecture.md` for full detail. Key points:
