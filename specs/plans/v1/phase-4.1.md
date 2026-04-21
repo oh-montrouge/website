@@ -1,6 +1,6 @@
 # Phase 4.1 — Public Pages + Navigation Shell
 
-**Status:** Not started
+**Status:** Complete
 
 **Goal:** static pages and the navigation structure that wraps all subsequent features.
 

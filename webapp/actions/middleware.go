@@ -10,6 +10,36 @@ import (
 	"ohmontrouge/webapp/services"
 )
 
+// LoadCurrentAccount is a non-blocking middleware that loads the authenticated
+// account into context under "current_account" when a valid active session exists.
+// Unlike RequireActiveAccount it does not redirect on failure — it simply skips.
+func LoadCurrentAccount(svc services.AccountAuthenticator) buffalo.MiddlewareFunc {
+	return func(next buffalo.Handler) buffalo.Handler {
+		return func(c buffalo.Context) error {
+			rawID := c.Session().Get("account_id")
+			if rawID == nil {
+				return next(c)
+			}
+			accountID, ok := rawID.(int64)
+			if !ok {
+				return next(c)
+			}
+			tx := c.Value("tx").(*pop.Connection)
+			account, err := svc.GetByID(tx, accountID)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return next(c)
+				}
+				return err
+			}
+			if account.Status == services.StatusActive {
+				c.Set("current_account", account)
+			}
+			return next(c)
+		}
+	}
+}
+
 // RequireActiveAccount redirects to /connexion if the session carries no valid,
 // active account. On success it stores the AccountDTO under "current_account".
 func RequireActiveAccount(svc services.AccountAuthenticator) buffalo.MiddlewareFunc {

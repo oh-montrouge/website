@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"time"
+
 	"ohmontrouge/webapp/public"
 	"ohmontrouge/webapp/templates"
 
@@ -11,21 +13,11 @@ var r *render.Engine
 
 func init() {
 	r = render.New(render.Options{
-		// HTML layout to be used for all HTML requests:
-		HTMLLayout: "application.plush.html",
-
-		// fs.FS containing templates
+		HTMLLayout:  "layouts/application.plush.html",
 		TemplatesFS: templates.FS(),
-
-		// fs.FS containing assets
-		AssetsFS: public.FS(),
-
-		// Add template helpers here:
+		AssetsFS:    public.FS(),
 		Helpers: render.Helpers{
-			// for non-bootstrap form helpers uncomment the lines
-			// below and import "github.com/gobuffalo/helpers/forms"
-			// forms.FormKey:     forms.Form,
-			// forms.FormForKey:  forms.FormFor,
+			"currentYear": func() int { return time.Now().Year() },
 		},
 	})
 }

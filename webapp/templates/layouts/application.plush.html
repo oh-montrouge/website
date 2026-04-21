@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>OHM — Orchestre d'Harmonie de Montrouge</title>
+        <link rel="icon" href="/assets/images/favicon.ico" />
+        <link rel="stylesheet" href="/assets/application.css" />
+        <meta name="csrf-param" content="authenticity_token" />
+        <meta name="csrf-token" content="<%= authenticity_token %>" />
+        <!-- alpine.js v3.15.11 — update specs/technical-specs/03-stack.md when upgrading -->
+        <script defer src="/assets/alpine.min.js"></script>
+    </head>
+    <body>
+        <div class="viewport">
+            <header class="appbar" x-data="{ menuOpen: false }">
+                <button class="appbar__menu" aria-label="Menu" @click="menuOpen = true">☰</button>
+
+                <a href="/" class="appbar__brand">
+                    <img src="/assets/images/logo.svg" alt="OHM" width="36" height="36" />
+                    <div class="appbar__brand-text">
+                        <b>OHM</b>
+                        <span class="appbar__brand-tagline">Orchestre d'Harmonie de Montrouge</span>
+                    </div>
+                </a>
+
+                <%= if (current_account != nil) { %>
+                <nav class="appbar__nav">
+                    <a href="/evenements" class="appbar__nav-item">Événements</a>
+                    <%= if (sheet_music_url != "") { %>
+                    <a href="<%= sheet_music_url %>" class="appbar__nav-item" target="_blank" rel="noreferrer noopener"
+                        >Partitions ↗</a
+                    >
+                    <% } %>
+                    <a href="/profil" class="appbar__nav-item">Mon profil</a>
+                </nav>
+                <div class="appbar__user">
+                    <span class="appbar__user-email"><%= current_account.Email %></span>
+                    <a href="/deconnexion" class="btn btn--ghost btn--sm">Déconnexion</a>
+                </div>
+                <% } else { %>
+                <div class="appbar__nav"></div>
+                <a href="/connexion" class="btn btn--primary btn--sm">Se connecter</a>
+                <% } %>
+
+                <!-- Mobile drawer -->
+                <div class="nav-drawer" x-show="menuOpen" @click.self="menuOpen = false" style="display: none">
+                    <div class="nav-drawer__panel">
+                        <button class="nav-drawer__close" @click="menuOpen = false" aria-label="Fermer">✕</button>
+                        <%= if (current_account != nil) { %>
+                        <a href="/evenements" class="nav-drawer__item" @click="menuOpen = false">Événements</a>
+                        <%= if (sheet_music_url != "") { %>
+                        <a
+                            href="<%= sheet_music_url %>"
+                            class="nav-drawer__item"
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            @click="menuOpen = false"
+                            >Partitions ↗</a
+                        >
+                        <% } %>
+                        <a href="/profil" class="nav-drawer__item" @click="menuOpen = false">Mon profil</a>
+                        <a href="/deconnexion" class="nav-drawer__item">Déconnexion</a>
+                        <% } else { %>
+                        <a href="/connexion" class="nav-drawer__item" @click="menuOpen = false">Se connecter</a>
+                        <% } %>
+                        <a href="/politique-de-confidentialite" class="nav-drawer__item" @click="menuOpen = false"
+                            >Politique de confidentialité</a
+                        >
+                    </div>
+                </div>
+            </header>
+
+            <%= partial("flash.html") %>
+
+            <main><%= yield %></main>
+
+            <footer class="footer">
+                <div>© <%= currentYear() %> · Orchestre d'Harmonie de Montrouge · Association loi 1901</div>
+                <div class="footer__links">
+                    <a href="/politique-de-confidentialite">Politique de confidentialité</a>
+                    <span style="color: var(--ink-5)">·</span>
+                    <a href="mailto:oh.montrouge@gmail.com">oh.montrouge@gmail.com</a>
+                </div>
+            </footer>
+        </div>
+    </body>
+</html>

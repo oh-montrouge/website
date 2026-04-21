@@ -8,9 +8,9 @@ tmp/
 !.env.*.example
 
 # Generated assets (rebuilt from public/assets/ sources)
-public/assets/application.css
 public/assets/application.js
 public/assets/buffalo.css
+# application.css is hand-authored (OHM design system) — tracked in git
 
 # Node (not used, but guard against accidental installs)
 node_modules/

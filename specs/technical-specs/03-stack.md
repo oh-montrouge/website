@@ -15,7 +15,7 @@
 | Migrations | Pop / Fizz DSL | Files in `migrations/`; raw SQL permitted |
 | DB driver | pgx (via Pop) | Full `TIMESTAMPTZ` support |
 | Template engine | Plush | Buffalo default; extends Go `html/template` |
-| Frontend interactivity | Alpine.js (vendored) | Reactive directives on server-rendered HTML; see ADR 008 |
+| Frontend interactivity | Alpine.js v3.15.11 (vendored) | Reactive directives on server-rendered HTML; `public/assets/alpine.min.js`; see ADR 008 |
 | Session store | gorilla/sessions + pgstore | PostgreSQL-backed; see ADR 001 |
 | CSRF | gorilla/csrf | Integrated in Buffalo middleware stack |
 | Password hashing | `golang.org/x/crypto/argon2` | First-party; no external dependency |
