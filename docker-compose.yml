@@ -25,6 +25,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
       PORT: "3000"
+      SHEET_MUSIC_URL: ${SHEET_MUSIC_URL}
     ports:
       - "127.0.0.1:3000:3000"
 
