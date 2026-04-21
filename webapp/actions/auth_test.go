@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"ohmontrouge/webapp/services"
+
 	"github.com/gobuffalo/buffalo"
 	"github.com/gobuffalo/pop/v6"
 	"github.com/stretchr/testify/assert"
-	"ohmontrouge/webapp/services"
 )
 
 type stubAuth struct {
@@ -89,7 +90,7 @@ func TestAuthHandler_Submit_Success_RedirectsToHome(t *testing.T) {
 	app.ServeHTTP(res, req)
 
 	assert.Equal(t, http.StatusSeeOther, res.Code)
-	assert.Equal(t, "/", res.Header().Get("Location"))
+	assert.Equal(t, "/evenements", res.Header().Get("Location"))
 }
 
 func TestAuthHandler_Logout_RedirectsToLogin(t *testing.T) {

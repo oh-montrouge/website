@@ -1,17 +1,95 @@
-<div class="row justify-content-center mt-5">
-  <div class="col-md-4">
-    <h2 class="mb-4">Connexion</h2>
-    <form action="/connexion" method="post">
-      <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>">
-      <div class="form-group mb-3">
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" class="form-control" required autofocus>
-      </div>
-      <div class="form-group mb-3">
-        <label for="password">Mot de passe</label>
-        <input type="password" id="password" name="password" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-primary w-100">Se connecter</button>
-    </form>
-  </div>
+<div class="login-shell" style="min-height: calc(100vh - var(--header-h))">
+    <div class="login-shell__art">
+        <div class="login-shell__brand">
+            <img
+                src="/assets/images/logo.svg"
+                alt="OHM"
+                width="56"
+                height="56"
+            />
+            <div
+                style="
+                    font-family: var(--font-serif);
+                    font-size: 22px;
+                    line-height: 1.1;
+                "
+            >
+                Orchestre d'Harmonie<br />
+                <span style="color: var(--ohm-gold)">de Montrouge</span>
+            </div>
+        </div>
+        <blockquote class="login-shell__quote">
+            « La musique est le langage<br />des émotions. »
+            <footer>— Emmanuel Kant</footer>
+        </blockquote>
+        <div class="login-shell__meta">
+            Association loi 1901 · Montrouge (92)
+        </div>
+    </div>
+
+    <div class="login-shell__form">
+        <div class="breadcrumb">
+            <a href="/">Accueil</a>
+            <span class="breadcrumb__sep">›</span>
+            <span>Connexion</span>
+        </div>
+        <h1 style="font-size: 36px; margin-bottom: 8px">Espace musicien</h1>
+        <p class="muted" style="margin-bottom: 32px">
+            Connectez-vous avec l'adresse e-mail communiquée à votre
+            administrateur.
+        </p>
+
+        <form
+            action="/connexion"
+            method="post"
+            class="stack"
+            style="--gap: 20px"
+        >
+            <input
+                type="hidden"
+                name="authenticity_token"
+                value="<%= authenticity_token %>"
+            />
+            <div class="field">
+                <label class="field__label" for="email"
+                    >Adresse e-mail <span class="req">*</span></label
+                >
+                <input
+                    class="input"
+                    type="email"
+                    id="email"
+                    name="email"
+                    required
+                    autofocus
+                    placeholder="marie.dupont@example.com"
+                />
+            </div>
+            <div class="field">
+                <label class="field__label" for="password"
+                    >Mot de passe <span class="req">*</span></label
+                >
+                <input
+                    class="input"
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                />
+            </div>
+            <button
+                type="submit"
+                class="btn btn--primary btn--lg"
+                style="width: 100%"
+            >
+                Se connecter
+            </button>
+            <p class="muted" style="font-size: 13px; margin-top: var(--sp-4)">
+                Pas encore de compte ? Seul un administrateur peut créer un
+                compte musicien. Contactez
+                <a href="mailto:oh.montrouge@gmail.com"
+                    >oh.montrouge@gmail.com</a
+                >.
+            </p>
+        </form>
+    </div>
 </div>

@@ -1,64 +1,42 @@
-<header>
-  <div class="container">
-    <div class="row">
-      <div class="col-md-1 col-sm-2 col-xs-2 logo">
-        <a href="<%= rootPath() %>"><img src="<%= rootPath() %>assets/images/logo.svg" alt=""></a>
-      </div>
-      <div class="col-md-9 col-sm-9 col-xs-10 titles">
-        <h1><%= t("welcome_greeting") %></h1>
-        <h2>
-          <a href="https://github.com/gobuffalo/buffalo"><i class="fab fa-github" aria-hidden="true"></i> https://github.com/gobuffalo/buffalo</a>
-        </h2>
-        <h2 class="documentation">
-          <a href="http://gobuffalo.io/"><i class="fa fa-book" aria-hidden="true"></i> Documentation</a>
-        </h2>
-      </div>
+<section class="hero">
+    <img src="/assets/images/logo.svg" alt="OHM" class="hero__logo" />
+    <h1>Orchestre d'Harmonie de Montrouge</h1>
+    <div class="hero__tag">Concerts et répétitions hebdomadaires, depuis 18xx</div>
+    <p class="hero__body">
+        Association loi 1901, l'OHM réunit chaque semaine une quarantaine de musiciens amateurs à la Distillerie de
+        Montrouge. Concerts en salle, en extérieurs, bandas... Rejoignez un collectif chaleureux.
+    </p>
+    <div class="hero__cta">
+        <%= if (current_account != nil) { %>
+        <a href="/evenements" class="btn btn--primary btn--lg">Voir les événements</a>
+        <% } else { %>
+        <a href="/connexion" class="btn btn--primary btn--lg">Espace musicien</a>
+        <a href="mailto:contact@ohm-montrouge.fr" class="btn btn--ghost btn--lg">Nous rejoindre</a>
+        <% } %>
     </div>
-  </div>
+</section>
 
-</header>
-
-<div class="row">
-  <div class="col-md-12">
-    <div class="subtitle">
-      <div class="container">
-        <h3>Defined Routes</h3>
-      </div>
+<div class="info-grid">
+    <div class="info-grid__item">
+        <h2 class="eyebrow" style="color: var(--ohm-gold-ink)">Formation</h2>
+        <p class="info-grid__stat">~40 musiciens</p>
+        <p class="muted">
+            Bois, cuivres, percussions. Répertoire varié, du classique au monde vidéo-ludique, en passant par les
+            traditionnels compositions d'harmonies et les arrangements de chansons populaires.
+        </p>
     </div>
-    <div class="table-responsive">
-      <table class="table table-striped">
-        <thead>
-          <tr text-align="left">
-            <th class="centered">METHOD</th>
-            <th>PATH</th>
-            <th>NAME</th>
-            <th>HANDLER</th>
-          </tr>
-        </thead>
-        <tbody>
-
-          <%= for (r) in routes { %>
-            <tr>
-              <td class="centered">
-                <%= r.Method %>
-              </td>
-              <td>
-                <%= if (r.Method != "GET" || r.Path ~= "{") { %><%=
-                  r.Path %><%
-                } else { %><%=
-                  linkTo(r.Path, {body: r.Path}) %><%
-                } %>
-              </td>
-              <td>
-                <%= r.PathName %>
-              </td>
-              <td><code><%= r.HandlerName %></code></td>
-            </tr>
-          <% } %>
-
-        </tbody>
-      </table>
+    <div class="info-grid__item">
+        <h2 class="eyebrow" style="color: var(--ohm-gold-ink)">Répétitions</h2>
+        <p class="info-grid__stat">Jeudi soir</p>
+        <p class="muted">La Distillerie, 17 rue Maurice Arnoux, Montrouge. Essais libres toute l'année.</p>
     </div>
-  </div>
+    <div class="info-grid__item">
+        <h2 class="eyebrow" style="color: var(--ohm-gold-ink)">Direction</h2>
+        <p class="info-grid__stat">Sylvain Dutouquet & Lucile Denœud</p>
+        <p class="muted">
+            Contactez-nous à
+            <a href="mailto:oh.montrouge@gmail.com">oh.montrouge@gmail.com</a>
+            pour en savoir plus.
+        </p>
+    </div>
 </div>
-<div class="foot"> <span> Powered by <a href="http://gobuffalo.io/">gobuffalo.io</a></span> </div>

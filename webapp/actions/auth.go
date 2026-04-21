@@ -5,9 +5,10 @@ import (
 	"errors"
 	"net/http"
 
+	"ohmontrouge/webapp/services"
+
 	"github.com/gobuffalo/buffalo"
 	"github.com/gobuffalo/pop/v6"
-	"ohmontrouge/webapp/services"
 )
 
 func init() {
@@ -53,7 +54,7 @@ func (h AuthHandler) Submit(c buffalo.Context) error {
 		}
 	}
 
-	return c.Redirect(http.StatusSeeOther, "/")
+	return c.Redirect(http.StatusSeeOther, "/evenements")
 }
 
 func (h AuthHandler) Logout(c buffalo.Context) error {

@@ -6,8 +6,13 @@ import (
 	"github.com/gobuffalo/buffalo"
 )
 
-// HomeHandler is a default handler to serve up
-// a home page.
-func HomeHandler(c buffalo.Context) error {
+// HomeHandler serves the public homepage and privacy notice.
+type HomeHandler struct{}
+
+func (h HomeHandler) Index(c buffalo.Context) error {
 	return c.Render(http.StatusOK, r.HTML("home/index.plush.html"))
+}
+
+func (h HomeHandler) Privacy(c buffalo.Context) error {
+	return c.Render(http.StatusOK, r.HTML("privacy/index.plush.html"))
 }

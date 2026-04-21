@@ -199,3 +199,74 @@ func TestRequireAdmin_IsAdmin_PassesThrough(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, res.Code)
 }
+
+// --- LoadCurrentAccount ---
+
+func TestLoadCurrentAccount_NoSession_PassesThroughWithoutAccount(t *testing.T) {
+	svc := stubMiddlewareAuth{}
+	checked := false
+	app := newTestApp(func(a *buffalo.App) {
+		a.Use(LoadCurrentAccount(svc))
+		a.GET("/", func(c buffalo.Context) error {
+			checked = true
+			assert.Nil(t, c.Value("current_account"), "current_account should not be set")
+			return c.Render(http.StatusOK, r.String("ok"))
+		})
+	})
+
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	assert.Equal(t, http.StatusOK, res.Code)
+	assert.True(t, checked)
+}
+
+func TestLoadCurrentAccount_ActiveAccount_SetsCurrentAccount(t *testing.T) {
+	svc := stubMiddlewareAuth{account: &services.AccountDTO{ID: 42, Status: services.StatusActive}}
+	app := newTestApp(func(a *buffalo.App) {
+		a.Use(injectSession("account_id", int64(42)))
+		a.Use(LoadCurrentAccount(svc))
+		a.GET("/", func(c buffalo.Context) error {
+			acct, ok := c.Value("current_account").(*services.AccountDTO)
+			assert.True(t, ok)
+			assert.Equal(t, int64(42), acct.ID)
+			return c.Render(http.StatusOK, r.String("ok"))
+		})
+	})
+
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	assert.Equal(t, http.StatusOK, res.Code)
+}
+
+func TestLoadCurrentAccount_PendingAccount_DoesNotSetCurrentAccount(t *testing.T) {
+	svc := stubMiddlewareAuth{account: &services.AccountDTO{ID: 42, Status: services.StatusPending}}
+	app := newTestApp(func(a *buffalo.App) {
+		a.Use(injectSession("account_id", int64(42)))
+		a.Use(LoadCurrentAccount(svc))
+		a.GET("/", func(c buffalo.Context) error {
+			assert.Nil(t, c.Value("current_account"), "pending account should not be set as current_account")
+			return c.Render(http.StatusOK, r.String("ok"))
+		})
+	})
+
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	assert.Equal(t, http.StatusOK, res.Code)
+}
+
+func TestLoadCurrentAccount_AccountNotFound_PassesThrough(t *testing.T) {
+	svc := stubMiddlewareAuth{err: sql.ErrNoRows}
+	app := newTestApp(func(a *buffalo.App) {
+		a.Use(injectSession("account_id", int64(99)))
+		a.Use(LoadCurrentAccount(svc))
+		a.GET("/", sentinel)
+	})
+
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	assert.Equal(t, http.StatusOK, res.Code)
+}

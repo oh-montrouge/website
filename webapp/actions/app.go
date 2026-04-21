@@ -62,8 +62,24 @@ func App() *buffalo.App {
 			Accounts: models.AccountStore{},
 			Roles:    models.AccountRoleStore{},
 		}
-		auth := AuthHandler{Accounts: authSvc, Sessions: models.HTTPSessionStore{}, DB: models.DB}
 
+		// Inject sheet_music_url into every request context (empty string when unset).
+		sheetMusicURL := envy.Get("SHEET_MUSIC_URL", "")
+		app.Use(func(next buffalo.Handler) buffalo.Handler {
+			return func(c buffalo.Context) error {
+				c.Set("sheet_music_url", sheetMusicURL)
+				return next(c)
+			}
+		})
+
+		// Optionally load the authenticated account; sets "current_account" when valid.
+		app.Use(LoadCurrentAccount(authSvc))
+
+		auth := AuthHandler{Accounts: authSvc, Sessions: models.HTTPSessionStore{}, DB: models.DB}
+		home := HomeHandler{}
+
+		app.GET("/", home.Index)
+		app.GET("/politique-de-confidentialite", home.Privacy)
 		app.GET("/connexion", auth.Form)
 		app.POST("/connexion", auth.Submit)
 		app.GET("/deconnexion", auth.Logout)
@@ -75,7 +91,6 @@ func App() *buffalo.App {
 			return c.Render(http.StatusOK, r.HTML("admin/index.plush.html"))
 		})
 
-		app.GET("/", HomeHandler)
 		app.ServeFiles("/", http.FS(public.FS()))
 	})
 
