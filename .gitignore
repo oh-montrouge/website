@@ -13,3 +13,5 @@ current/ohm-agenda/db_export.sql
 
 .mise/prepare-state.toml
 mise.local.toml
+
+coverage.out

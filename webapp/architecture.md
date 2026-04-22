@@ -45,7 +45,7 @@ and its service. See `specs/architecture/context-map.md` for full detail.
 
 **Context:** Identity & Access
 
-**Status:** Phase 2 complete. Phase 4.2 adds token operations.
+**Status:** Phase 4.2 complete.
 
 | Method | Phase | Notes |
 |--------|-------|-------|
@@ -62,8 +62,8 @@ and its service. See `specs/architecture/context-map.md` for full detail.
 | `ValidatePasswordResetToken` | 4.2 | Checks unused+unexpired+active account |
 | `CompletePasswordReset` | 4.2 | Updates password, marks token used |
 
-**Repository deps:** `AccountRepository`, `RoleRepository`, `InviteTokenRepository` (4.2),
-`PasswordResetTokenRepository` (4.2), `EventRepository` (4.6 only, for RSVP seeding).
+**Repository deps:** `AccountRepository`, `RoleRepository`, `InviteTokenRepository`,
+`PasswordResetTokenRepository`, `EventRepository` (4.6 only, for RSVP seeding).
 
 ---
 
@@ -188,8 +188,8 @@ provides the production implementations. Tests inject stubs.
 
 | Interface | Phase | Implemented by |
 |-----------|-------|---------------|
-| `InviteTokenRepository` | 4.2 | `models.InviteTokenStore` |
-| `PasswordResetTokenRepository` | 4.2 | `models.PasswordResetTokenStore` |
+| `InviteTokenRepository` | 4.2 ✅ | `models.InviteTokenStore` |
+| `PasswordResetTokenRepository` | 4.2 ✅ | `models.PasswordResetTokenStore` |
 | `SeasonRepository` | 4.4 | `models.SeasonStore` |
 | `FeePaymentRepository` | 4.5 | `models.FeePaymentStore` |
 | `EventRepository` | 4.6 | `models.EventStore` |
@@ -207,7 +207,7 @@ registration in `app.go`.
 | `auth.go` | 2 | `AuthHandler` | `AccountAuthenticator`, `SessionRepository` |
 | `middleware.go` | 2 | — | `AccountAuthenticator` |
 | `home.go` | 2/4.1 | `HomeHandler` | — |
-| `tokens.go` | 4.2 | `TokensHandler` | `AccountService` |
+| `tokens.go` | 4.2 ✅ | `TokensHandler` | `AccountTokenManager`, `SessionRepository` |
 | `musicians.go` | 4.3 | `MusiciansHandler` | `AccountService`, `MembershipService`, `ComplianceService`, `InstrumentRepository` |
 | `profile.go` | 4.3 | `ProfileHandler` | `MembershipService` |
 | `retention.go` | 4.3 | `RetentionHandler` | `ComplianceService` |
@@ -227,6 +227,8 @@ construction. See `specs/technical-adrs/007-account-musician-dtos.md`.
 | `AccountDTO` | `account.go` | I&A | ID, Email, Status |
 | `InviteTokenDTO` | `account.go` | I&A | Token, URL, ExpiresAt |
 | `PasswordResetTokenDTO` | `account.go` | I&A | Token, URL, ExpiresAt |
+| `InviteContextDTO` | `account.go` | I&A | TokenID, AccountID, FirstName, LastName, Email, InstrumentName |
+| `PasswordResetContextDTO` | `account.go` | I&A | TokenID, AccountID |
 | `MusicianProfile` | `musician.go` | Membership | AccountID + all profile fields |
 | `MusicianProfileSummary` | `musician.go` | Membership | AccountID, Name, Instrument, Status |
 | `RetentionEntryDTO` | `musician.go` | Membership | AccountID, Name, Instrument, LastSeasonLabel, LastSeasonEndDate |

@@ -1,0 +1,108 @@
+<div class="login-shell" style="min-height: calc(100vh - var(--header-h))">
+    <%= partial("tokens/art.html") %>
+
+    <div class="login-shell__form">
+        <div class="breadcrumb">
+            <a href="/">Accueil</a>
+            <span class="breadcrumb__sep">›</span>
+            <span>Créer mon compte</span>
+        </div>
+        <h1 style="font-size: 36px; margin-bottom: 8px">Bienvenue, <%= invite.FirstName %> !</h1>
+        <p class="muted" style="margin-bottom: 24px">
+            Choisissez un mot de passe pour activer votre compte musicien.
+        </p>
+
+        <div class="card" style="margin-bottom: 24px; padding: 16px">
+            <div style="font-weight: 600"><%= invite.FirstName %> <%= invite.LastName %></div>
+            <div class="muted" style="font-size: 14px"><%= invite.Email %></div>
+            <div class="muted" style="font-size: 14px"><%= invite.InstrumentName %></div>
+        </div>
+
+        <%= if (passwordError != "") { %>
+        <div class="alert alert--danger" role="alert" style="margin-bottom: 16px">
+            <%= passwordError %>
+        </div>
+        <% } %>
+
+        <form
+            action="<%= formAction %>"
+            method="post"
+            class="stack"
+            style="--gap: 20px"
+            x-data="{ consentPrivacy: false }"
+        >
+            <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+
+            <div class="field">
+                <label class="field__label" for="password">
+                    Mot de passe <span class="req" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="input"
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    autocomplete="new-password"
+                    aria-describedby="password-hint"
+                />
+                <p class="field__hint" id="password-hint">
+                    22 caractères minimum — majuscule, minuscule, chiffre et caractère spécial.
+                </p>
+            </div>
+
+            <div class="field">
+                <label class="field__label" for="password_confirm">
+                    Confirmation du mot de passe <span class="req" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="input"
+                    type="password"
+                    id="password_confirm"
+                    name="password_confirm"
+                    required
+                    autocomplete="new-password"
+                />
+            </div>
+
+            <div class="field">
+                <label class="checkbox">
+                    <input
+                        type="checkbox"
+                        name="privacy_consent"
+                        value="1"
+                        x-model="consentPrivacy"
+                    />
+                    <span>
+                        J'ai lu et j'accepte la
+                        <a
+                            href="/politique-de-confidentialite"
+                            target="_blank"
+                            aria-label="politique de confidentialité (ouvre dans un nouvel onglet)"
+                        >politique de confidentialité</a>.
+                        <span class="req" aria-hidden="true">*</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="field">
+                <label class="checkbox">
+                    <input type="checkbox" name="phone_address_consent" value="1" />
+                    <span>
+                        J'autorise l'association à conserver mon numéro de téléphone et mon adresse
+                        postale pour les besoins de la gestion associative.
+                    </span>
+                </label>
+            </div>
+
+            <button
+                type="submit"
+                class="btn btn--primary btn--lg"
+                style="width: 100%"
+                :disabled="!consentPrivacy"
+            >
+                Créer mon compte
+            </button>
+        </form>
+    </div>
+</div>

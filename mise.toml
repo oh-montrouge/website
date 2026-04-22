@@ -22,12 +22,12 @@ description = "Register git pre-commit hooks — reruns automatically when lefth
 [[hooks.postinstall]]
 script = "mise prepare"
 
-[tasks.dev]
+[tasks."dev:start"]
 description = "Start local environment (postgres in Docker + buffalo dev)"
 dir = "webapp"
 run = "docker compose up -d --wait postgres && buffalo pop migrate --path ../db/migrations && buffalo dev"
 
-[tasks.stop]
+[tasks."dev:stop"]
 description = "Stop the local development environment (postgres + buffalo dev)"
 dir = "webapp"
 run = """
@@ -35,7 +35,7 @@ docker compose stop
 pkill -f ohm-build || true
 """
 
-[tasks.kill]
+[tasks."dev:kill"]
 description = "Stop the local development environment (postgres + buffalo dev)"
 dir = "webapp"
 run = """
@@ -43,7 +43,55 @@ docker compose down -v
 pkill -f ohm-build || true
 """
 
-[tasks.seed-admin]
+[tasks.hash-password]
+description = "Generate an argon2id hash for a plaintext password — usage: mise run hash-password -- <password>"
+dir = "scripts/hash-password"
+run = "go run main.go $@"
+
+[tasks."dev:seed-db"]
+description = """
+Populate dev DB with dummy data (local only). Idempotent — truncates and re-seeds on each run.
+Default password for all accounts: devpassword
+"""
+dir = "webapp"
+run = """
+docker compose exec -T postgres psql -U ohm ohm_development < ../db/dummy-data/01_accounts.sql
+docker compose exec -T postgres psql -U ohm ohm_development < ../db/dummy-data/02_account_roles.sql
+"""
+
+[tasks.test]
+description = "Run test suite — Docker daemon must be running (testcontainers manages its own postgres)"
+dir = "webapp"
+usage = 'flag "--coverage" help="Generate a coverage profile to coverage.out"'
+run = """
+#!/usr/bin/env bash
+COVER=""
+if [[ "${usage_coverage:-false}" == "true" ]]; then
+  COVER="-cover -coverprofile=../coverage.out"
+fi
+GO_ENV=test go test -race $COVER ./...
+"""
+
+[tasks.lint]
+description = "Run full linter suite"
+dir = "webapp"
+run = "golangci-lint run ./..."
+
+[tasks."prod:publish"]
+description = "Build and push production Docker image — requires IMAGE_REPO in shell profile"
+run = """
+SHA=$(git rev-parse --short HEAD)
+docker build -t "${IMAGE_REPO}:latest" -t "${IMAGE_REPO}:${SHA}" .
+docker push "${IMAGE_REPO}:latest"
+docker push "${IMAGE_REPO}:${SHA}"
+echo "Published: ${IMAGE_REPO}:${SHA}"
+"""
+
+[tasks."prod:deploy"]
+description = "Deploy to production VPS via SSH — requires DEPLOY_HOST in shell profile"
+run = "ssh $DEPLOY_HOST 'cd /srv/ohm && git pull && docker compose pull && docker compose run --rm app buffalo-pop pop migrate --path db/migrations && docker compose up -d'"
+
+[tasks."prod:seed-admin"]
 description = "Bootstrap first admin account in production — set ADMIN_EMAIL and ADMIN_PASSWORD in mise.local.toml"
 run = """
 HASH=$(cd scripts/hash-password && go run main.go "$ADMIN_PASSWORD")
@@ -70,43 +118,3 @@ scp "$TMPFILE" "$DEPLOY_HOST:/tmp/seed-admin.sql"
 rm "$TMPFILE"
 ssh "$DEPLOY_HOST" 'cd /srv/ohm && cat /tmp/seed-admin.sql | docker compose exec -T postgres psql -U ohm ohm_production && rm /tmp/seed-admin.sql'
 """
-
-[tasks.hash-password]
-description = "Generate an argon2id hash for a plaintext password — usage: mise run hash-password -- <password>"
-dir = "scripts/hash-password"
-run = "go run main.go $@"
-
-[tasks.seed-dev]
-description = """
-Populate dev DB with dummy data (local only). Idempotent — truncates and re-seeds on each run.
-Default password for all accounts: devpassword
-"""
-dir = "webapp"
-run = """
-docker compose exec -T postgres psql -U ohm ohm_development < ../db/dummy-data/01_accounts.sql
-docker compose exec -T postgres psql -U ohm ohm_development < ../db/dummy-data/02_account_roles.sql
-"""
-
-[tasks.test]
-description = "Run test suite — Docker daemon must be running (testcontainers manages its own postgres)"
-dir = "webapp"
-run = "GO_ENV=test go test -race ./..."
-
-[tasks.lint]
-description = "Run full linter suite"
-dir = "webapp"
-run = "golangci-lint run ./..."
-
-[tasks.publish]
-description = "Build and push production Docker image — requires IMAGE_REPO in shell profile"
-run = """
-SHA=$(git rev-parse --short HEAD)
-docker build -t "${IMAGE_REPO}:latest" -t "${IMAGE_REPO}:${SHA}" .
-docker push "${IMAGE_REPO}:latest"
-docker push "${IMAGE_REPO}:${SHA}"
-echo "Published: ${IMAGE_REPO}:${SHA}"
-"""
-
-[tasks.deploy]
-description = "Deploy to production VPS via SSH — requires DEPLOY_HOST in shell profile"
-run = "ssh $DEPLOY_HOST 'cd /srv/ohm && git pull && docker compose pull && docker compose run --rm app buffalo-pop pop migrate --path db/migrations && docker compose up -d'"

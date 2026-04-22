@@ -1,6 +1,6 @@
 # Phase 4.2 — Account Lifecycle
 
-**Status:** Not started
+**Status:** Completed
 
 **Goal:** invite and password reset flows. A musician can follow an invite URL, set their
 password and consent, and land on the events page. An admin can generate a reset link for

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/gobuffalo/pop/v6"
@@ -35,6 +36,10 @@ func (s stubAccountRepo) Create(_ *pop.Connection, _, _ string, _ int64) (int64,
 }
 
 func (s stubAccountRepo) UpdatePasswordHash(_ *pop.Connection, _ int64, _ string) error {
+	return s.err
+}
+
+func (s stubAccountRepo) Activate(_ *pop.Connection, _ int64, _ string, _ bool) error {
 	return s.err
 }
 
@@ -197,4 +202,212 @@ func TestResetPassword_AccountNotActive(t *testing.T) {
 	}
 	err := svc.ResetPassword(nil, "pending@example.com", "newpassword")
 	assert.ErrorIs(t, err, services.ErrAccountNotActive)
+}
+
+// --- token stubs ---
+
+type stubInviteTokenRepo struct {
+	record           *models.InviteTokenRecord
+	findErr          error
+	generateErr      error
+	markUsedErr      error
+	invalidateErr    error
+	generatedToken   string
+	invalidateCalled bool
+}
+
+func (s *stubInviteTokenRepo) Generate(_ *pop.Connection, _ int64, token string, _ time.Time) error {
+	s.generatedToken = token
+	return s.generateErr
+}
+
+func (s *stubInviteTokenRepo) FindByToken(_ *pop.Connection, _ string) (*models.InviteTokenRecord, error) {
+	return s.record, s.findErr
+}
+
+func (s *stubInviteTokenRepo) MarkUsed(_ *pop.Connection, _ int64) error {
+	return s.markUsedErr
+}
+
+func (s *stubInviteTokenRepo) InvalidateExisting(_ *pop.Connection, _ int64) error {
+	s.invalidateCalled = true
+	return s.invalidateErr
+}
+
+type stubResetTokenRepo struct {
+	record           *models.PasswordResetTokenRecord
+	findErr          error
+	generateErr      error
+	markUsedErr      error
+	invalidateErr    error
+	invalidateCalled bool
+}
+
+func (s *stubResetTokenRepo) Generate(_ *pop.Connection, _ int64, _ string, _ time.Time) error {
+	return s.generateErr
+}
+
+func (s *stubResetTokenRepo) FindByToken(_ *pop.Connection, _ string) (*models.PasswordResetTokenRecord, error) {
+	return s.record, s.findErr
+}
+
+func (s *stubResetTokenRepo) MarkUsed(_ *pop.Connection, _ int64) error {
+	return s.markUsedErr
+}
+
+func (s *stubResetTokenRepo) InvalidateExisting(_ *pop.Connection, _ int64) error {
+	s.invalidateCalled = true
+	return s.invalidateErr
+}
+
+// --- invite token tests ---
+
+func TestGenerateInviteToken_Success(t *testing.T) {
+	stub := &stubInviteTokenRepo{}
+	svc := services.AccountService{
+		Accounts:     stubAccountRepo{},
+		Roles:        stubRoleRepo{},
+		InviteTokens: stub,
+	}
+	dto, err := svc.GenerateInviteToken(nil, 1, "https://ohm.test")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, dto.Token)
+	assert.Contains(t, dto.URL, "/invitation/")
+	assert.True(t, dto.ExpiresAt.After(time.Now()))
+	assert.True(t, stub.invalidateCalled)
+}
+
+func TestGenerateInviteToken_InvalidateError(t *testing.T) {
+	stub := &stubInviteTokenRepo{invalidateErr: errors.New("db error")}
+	svc := services.AccountService{InviteTokens: stub}
+	_, err := svc.GenerateInviteToken(nil, 1, "https://ohm.test")
+	assert.Error(t, err)
+}
+
+func TestValidateInviteToken_Valid(t *testing.T) {
+	stub := &stubInviteTokenRepo{record: &models.InviteTokenRecord{
+		TokenID:        10,
+		AccountID:      5,
+		FirstName:      "Alice",
+		LastName:       "Dupont",
+		Email:          "alice@example.com",
+		InstrumentName: "Clarinette",
+	}}
+	svc := services.AccountService{InviteTokens: stub}
+	ctx, err := svc.ValidateInviteToken(nil, "some-token")
+	assert.NoError(t, err)
+	assert.Equal(t, int64(10), ctx.TokenID)
+	assert.Equal(t, "Alice", ctx.FirstName)
+	assert.Equal(t, "Clarinette", ctx.InstrumentName)
+}
+
+func TestValidateInviteToken_NotFound(t *testing.T) {
+	stub := &stubInviteTokenRepo{record: nil}
+	svc := services.AccountService{InviteTokens: stub}
+	_, err := svc.ValidateInviteToken(nil, "bad-token")
+	assert.ErrorIs(t, err, services.ErrInvalidToken)
+}
+
+func TestValidateInviteToken_DBError(t *testing.T) {
+	stub := &stubInviteTokenRepo{findErr: errors.New("db error")}
+	svc := services.AccountService{InviteTokens: stub}
+	_, err := svc.ValidateInviteToken(nil, "some-token")
+	assert.Error(t, err)
+	assert.NotErrorIs(t, err, services.ErrInvalidToken)
+}
+
+func TestCompleteInvite_Success(t *testing.T) {
+	accounts := stubAccountRepo{}
+	tokens := &stubInviteTokenRepo{}
+	svc := services.AccountService{Accounts: accounts, InviteTokens: tokens}
+	err := svc.CompleteInvite(nil, 10, 5, "hash", true)
+	assert.NoError(t, err)
+}
+
+func TestCompleteInvite_ActivateError(t *testing.T) {
+	accounts := stubAccountRepo{err: errors.New("db error")}
+	svc := services.AccountService{Accounts: accounts, InviteTokens: &stubInviteTokenRepo{}}
+	err := svc.CompleteInvite(nil, 10, 5, "hash", false)
+	assert.Error(t, err)
+}
+
+func TestCompleteInvite_MarkUsedError(t *testing.T) {
+	accounts := stubAccountRepo{}
+	tokens := &stubInviteTokenRepo{markUsedErr: errors.New("db error")}
+	svc := services.AccountService{Accounts: accounts, InviteTokens: tokens}
+	err := svc.CompleteInvite(nil, 10, 5, "hash", true)
+	assert.Error(t, err)
+}
+
+// --- password reset token tests ---
+
+func TestGeneratePasswordResetToken_Success(t *testing.T) {
+	stub := &stubResetTokenRepo{}
+	svc := services.AccountService{ResetTokens: stub}
+	dto, err := svc.GeneratePasswordResetToken(nil, 1, "https://ohm.test")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, dto.Token)
+	assert.Contains(t, dto.URL, "/reinitialiser-mot-de-passe/")
+	assert.True(t, stub.invalidateCalled)
+}
+
+func TestValidatePasswordResetToken_Valid(t *testing.T) {
+	stub := &stubResetTokenRepo{record: &models.PasswordResetTokenRecord{
+		TokenID:       20,
+		AccountID:     7,
+		AccountStatus: "active",
+	}}
+	svc := services.AccountService{ResetTokens: stub}
+	ctx, err := svc.ValidatePasswordResetToken(nil, "some-token")
+	assert.NoError(t, err)
+	assert.Equal(t, int64(20), ctx.TokenID)
+	assert.Equal(t, int64(7), ctx.AccountID)
+}
+
+func TestValidatePasswordResetToken_NotFound(t *testing.T) {
+	svc := services.AccountService{ResetTokens: &stubResetTokenRepo{record: nil}}
+	_, err := svc.ValidatePasswordResetToken(nil, "bad-token")
+	assert.ErrorIs(t, err, services.ErrInvalidToken)
+}
+
+func TestCompletePasswordReset_Success(t *testing.T) {
+	svc := services.AccountService{
+		Accounts:    stubAccountRepo{},
+		ResetTokens: &stubResetTokenRepo{},
+	}
+	err := svc.CompletePasswordReset(nil, 20, 7, "newhash")
+	assert.NoError(t, err)
+}
+
+// --- password strength tests ---
+
+func TestValidatePasswordStrength_TooShort(t *testing.T) {
+	err := services.ValidatePasswordStrength("Short1!", "Short1!")
+	assert.Error(t, err)
+}
+
+func TestValidatePasswordStrength_MissingUppercase(t *testing.T) {
+	err := services.ValidatePasswordStrength("alllowercase1!longenough", "alllowercase1!longenough")
+	assert.Error(t, err)
+}
+
+func TestValidatePasswordStrength_MissingDigit(t *testing.T) {
+	err := services.ValidatePasswordStrength("NoDigitHereAtAllLong!", "NoDigitHereAtAllLong!")
+	assert.Error(t, err)
+}
+
+func TestValidatePasswordStrength_MissingSpecial(t *testing.T) {
+	err := services.ValidatePasswordStrength("NoSpecialChar1234567890", "NoSpecialChar1234567890")
+	assert.Error(t, err)
+}
+
+func TestValidatePasswordStrength_Mismatch(t *testing.T) {
+	err := services.ValidatePasswordStrength("Valid1!Password_long", "different")
+	assert.Error(t, err)
+}
+
+func TestValidatePasswordStrength_Valid(t *testing.T) {
+	pw := "ValidPassword1!ExtraLong"
+	err := services.ValidatePasswordStrength(pw, pw)
+	assert.NoError(t, err)
 }

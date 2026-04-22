@@ -1,6 +1,8 @@
 package services
 
 import (
+	"time"
+
 	"github.com/gobuffalo/pop/v6"
 	"ohmontrouge/webapp/models"
 )
@@ -19,6 +21,37 @@ type AccountRepository interface {
 	GetByID(tx *pop.Connection, id int64) (*models.Account, error)
 	Create(tx *pop.Connection, email, passwordHash string, instrumentID int64) (int64, error)
 	UpdatePasswordHash(tx *pop.Connection, id int64, hash string) error
+	// Activate transitions a pending account to active in a single SQL UPDATE.
+	// Sets status, password_hash, phone_address_consent; clears phone/address when consent is false.
+	Activate(tx *pop.Connection, id int64, passwordHash string, phoneAddressConsent bool) error
+}
+
+// InviteTokenRepository is the interface for invite token persistence.
+// The real implementation is models.InviteTokenStore; tests inject stubs.
+type InviteTokenRepository interface {
+	// Generate inserts a new token row. Call InvalidateExisting first within the same tx.
+	Generate(tx *pop.Connection, accountID int64, token string, expiresAt time.Time) error
+	// FindByToken returns the token row joined with account and instrument data.
+	// Returns nil, nil when the token is not found, expired, used, or the account is not pending.
+	FindByToken(tx *pop.Connection, token string) (*models.InviteTokenRecord, error)
+	// MarkUsed marks the given token as used.
+	MarkUsed(tx *pop.Connection, tokenID int64) error
+	// InvalidateExisting marks all unused tokens for the account as used.
+	InvalidateExisting(tx *pop.Connection, accountID int64) error
+}
+
+// PasswordResetTokenRepository is the interface for password reset token persistence.
+// The real implementation is models.PasswordResetTokenStore; tests inject stubs.
+type PasswordResetTokenRepository interface {
+	// Generate inserts a new token row. Call InvalidateExisting first within the same tx.
+	Generate(tx *pop.Connection, accountID int64, token string, expiresAt time.Time) error
+	// FindByToken returns the token row joined with account status.
+	// Returns nil, nil when the token is not found, expired, used, or the account is not active.
+	FindByToken(tx *pop.Connection, token string) (*models.PasswordResetTokenRecord, error)
+	// MarkUsed marks the given token as used.
+	MarkUsed(tx *pop.Connection, tokenID int64) error
+	// InvalidateExisting marks all unused tokens for the account as used.
+	InvalidateExisting(tx *pop.Connection, accountID int64) error
 }
 
 // SessionRepository is the interface the auth handler depends on to link a session to an account.
