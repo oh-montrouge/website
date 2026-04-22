@@ -26,7 +26,7 @@ Depends on: Phase 2
 Wireframe screens: `HomeScreen`, `LoginScreen`, `PrivacyScreen` (`public.jsx`); `AppBar`,
 `Footer` (`shared.jsx`); design tokens (`styles/tokens.css`); component styles
 (`styles/components.css`).
-Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+Source: `specs/plans/v1/wireframes/wireframes/project/`
 
 **Alpine.js setup — establish here, used in all subsequent phases:**
 

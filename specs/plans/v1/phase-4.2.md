@@ -29,7 +29,7 @@ Depends on: Phase 2
 
 Wireframe screens: `InviteScreen` (active and expired states), `PasswordResetScreen`
 (`public.jsx`).
-Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+Source: `specs/plans/v1/wireframes/wireframes/project/`
 
 **Alpine.js usage in this phase:**
 - Invite form submit gate: `x-data="{ consentPrivacy: false }"` on the `<form>`; `x-model`

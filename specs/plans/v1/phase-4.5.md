@@ -27,7 +27,7 @@ Depends on: Phase 4.3 (musician accounts must exist) + Phase 4.4 (seasons must e
 The fee payment section is embedded in `AdminMusicianDetailScreen` (`admin-musicians.jsx`),
 not a standalone screen. Refer to the Phase 4.3 design reference for the full detail page
 context.
-Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+Source: `specs/plans/v1/wireframes/wireframes/project/`
 
 No Alpine.js usage beyond what Phase 4.3 introduces on the musician detail page.
 

@@ -96,6 +96,7 @@ A scheduled event.
 | Name | Yes | — |
 | Date/time | Yes | — |
 | Type | Yes | `concert` \| `rehearsal` \| `other` |
+| Description | Text | — |
 
 ---
 

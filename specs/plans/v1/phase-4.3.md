@@ -30,7 +30,7 @@ Depends on: Phase 4.2
 Wireframe screens: `AdminMusiciansScreen`, `AdminMusicianDetailScreen`,
 `AdminMusicianNewScreen`, and modals `InviteLinkModal`, `AnonymizeModal`,
 `LastAdminBlockModal` (`admin-musicians.jsx`).
-Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+Source: `specs/plans/v1/wireframes/wireframes/project/`
 
 **Alpine.js usage in this phase — three modal dialogs on the musician detail page:**
 

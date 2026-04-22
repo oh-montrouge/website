@@ -30,7 +30,7 @@ Depends on: Phase 4.3 (accounts must exist for RSVP seeding)
 Wireframe screens: `EventListScreen`, `EventDetailScreen` (concert / rehearsal / other
 variants), `PupitreTable`, `AdminEventsScreen`, `AdminEventEditScreen`,
 `AdminRetentionScreen` (`musician.jsx`, `admin-other.jsx`).
-Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+Source: `specs/plans/v1/wireframes/wireframes/project/`
 
 **Alpine.js usage in this phase (most Alpine-intensive phase):**
 
