@@ -1,5 +1,6 @@
 CLAUDE.local.md
 .claude
+.zed
 
 # Production environment files (never commit — copy from .env.*.example)
 .env
