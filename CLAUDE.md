@@ -45,3 +45,5 @@ See `webapp/TESTING.md` for stub patterns, test app setup, and the integration t
 # Design references
 
 Some plans may refer to a design (wireframes). Those are guidelines, not hard constraints. If the implementation sounds too complexe, stop and ask.
+
+Do not blindly copy wireframes code, adapt to ensure accessibility, SEO and other web development best practices.
