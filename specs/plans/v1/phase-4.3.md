@@ -77,14 +77,14 @@ another service.
 | `GetProfile` | |
 | `SetInitialProfile` | Called on musician creation |
 | `UpdateProfile` | Validates under-15 rule (birth date + parental consent URI) |
-| `ListActive` | For musician list page |
+| `ListNonAnonymized` | For musician list page |
 | `ConsentWithdrawal` | Clears phone + address + consent flag |
 | `ToggleProcessingRestriction` | |
 
 **MembershipRepository methods to define** (replace `any` placeholder in
 `services/repositories.go`; implemented by `models.AccountStore`):
-`GetProfile`, `SetProfile`, `UpdateProfile`, `ListActive`, `ListForRetentionReview`,
-`ClearProfileFields`, `SetConsent`, `ToggleProcessingRestriction`
+`GetProfile`, `SetProfile`, `UpdateProfile`, `ListNonAnonymized`, `ListForRetentionReview`,
+`ClearMembershipFields`, `WithdrawConsent`, `ToggleProcessingRestriction`
 
 **ComplianceService methods to implement** (`services/compliance.go`):
 

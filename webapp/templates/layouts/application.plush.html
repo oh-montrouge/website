@@ -33,6 +33,9 @@
                     >
                     <% } %>
                     <a href="/profil" class="appbar__nav-item">Mon profil</a>
+                    <%= if (is_admin) { %>
+                    <a href="/admin/musiciens" class="appbar__nav-item appbar__nav-item--admin">Musiciens</a>
+                    <% } %>
                 </nav>
                 <div class="appbar__user">
                     <span class="appbar__user-email"><%= current_account.Email %></span>
@@ -60,6 +63,9 @@
                         >
                         <% } %>
                         <a href="/profil" class="nav-drawer__item" @click="menuOpen = false">Mon profil</a>
+                        <%= if (is_admin) { %>
+                        <a href="/admin/musiciens" class="nav-drawer__item" @click="menuOpen = false">Musiciens</a>
+                        <% } %>
                         <a href="/deconnexion" class="nav-drawer__item">Déconnexion</a>
                         <% } else { %>
                         <a href="/connexion" class="nav-drawer__item" @click="menuOpen = false">Se connecter</a>

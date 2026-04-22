@@ -34,6 +34,9 @@ var (
 	ErrAdminAlreadyExists = errors.New("an active admin account already exists")
 	ErrAccountNotActive   = errors.New("account is not active")
 	ErrInvalidToken       = errors.New("token not found, expired, or already used")
+	ErrLastAdmin          = errors.New("impossible : c'est le dernier administrateur actif")
+	ErrAccountNotPending  = errors.New("le compte n'est pas en attente")
+	ErrEmailInUse         = errors.New("cette adresse e-mail est déjà utilisée")
 )
 
 // InviteContextDTO carries account info needed to render the invite form.
@@ -92,6 +95,20 @@ type AccountTokenManager interface {
 	CompleteInvite(tx *pop.Connection, tokenID, accountID int64, passwordHash string, phoneAddressConsent bool) error
 	ValidatePasswordResetToken(tx *pop.Connection, token string) (*PasswordResetContextDTO, error)
 	CompletePasswordReset(tx *pop.Connection, tokenID, accountID int64, passwordHash string) error
+}
+
+// AccountAdminManager is the interface MusiciansHandler depends on for admin account operations.
+type AccountAdminManager interface {
+	GetByID(tx *pop.Connection, id int64) (*AccountDTO, error)
+	IsAdmin(tx *pop.Connection, accountID int64) (bool, error)
+	CreatePending(tx *pop.Connection, email string, instrumentID int64) (int64, error)
+	GenerateInviteToken(tx *pop.Connection, accountID int64, baseURL string) (*InviteTokenDTO, error)
+	GetActiveInviteToken(tx *pop.Connection, accountID int64, baseURL string) (*InviteTokenDTO, error)
+	GeneratePasswordResetToken(tx *pop.Connection, accountID int64, baseURL string) (*PasswordResetTokenDTO, error)
+	GetActivePasswordResetToken(tx *pop.Connection, accountID int64, baseURL string) (*PasswordResetTokenDTO, error)
+	GrantAdmin(tx *pop.Connection, accountID int64) error
+	RevokeAdmin(tx *pop.Connection, accountID int64) error
+	DeletePending(tx *pop.Connection, accountID int64) error
 }
 
 // AccountService implements domain logic for account operations.
@@ -334,6 +351,110 @@ func (s AccountService) GetByID(tx *pop.Connection, id int64) (*AccountDTO, erro
 		return nil, err
 	}
 	return toAccountDTO(account), nil
+}
+
+// CreatePending creates a new account with status=pending and no password hash.
+func (s AccountService) CreatePending(tx *pop.Connection, email string, instrumentID int64) (int64, error) {
+	return s.Accounts.CreatePending(tx, email, instrumentID)
+}
+
+// GetActiveInviteToken returns the current active invite token for the account, or nil if none exists.
+func (s AccountService) GetActiveInviteToken(tx *pop.Connection, accountID int64, baseURL string) (*InviteTokenDTO, error) {
+	tok, err := s.InviteTokens.FindActiveForAccount(tx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if tok == nil {
+		return nil, nil
+	}
+	return &InviteTokenDTO{
+		Token:     tok.Token,
+		URL:       baseURL + "/invitation/" + tok.Token,
+		ExpiresAt: tok.ExpiresAt,
+	}, nil
+}
+
+// GetActivePasswordResetToken returns the current active reset token for the account, or nil if none exists.
+func (s AccountService) GetActivePasswordResetToken(tx *pop.Connection, accountID int64, baseURL string) (*PasswordResetTokenDTO, error) {
+	tok, err := s.ResetTokens.FindActiveForAccount(tx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if tok == nil {
+		return nil, nil
+	}
+	return &PasswordResetTokenDTO{
+		Token:     tok.Token,
+		URL:       baseURL + "/reinitialiser-mot-de-passe/" + tok.Token,
+		ExpiresAt: tok.ExpiresAt,
+	}, nil
+}
+
+// GrantAdmin assigns the admin role to the account. Idempotent — no-op if role already held.
+func (s AccountService) GrantAdmin(tx *pop.Connection, accountID int64) error {
+	has, err := s.Roles.HasRole(tx, accountID, RoleAdmin)
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil // already has role; idempotent
+	}
+	roleID, err := s.Roles.GetIDByName(tx, RoleAdmin)
+	if err != nil {
+		return err
+	}
+	return s.Roles.AssignRole(tx, accountID, roleID)
+}
+
+// RevokeAdmin removes the admin role from the account.
+// Returns ErrLastAdmin when the account is the last active admin.
+// Idempotent — no-op if the account does not hold the role.
+func (s AccountService) RevokeAdmin(tx *pop.Connection, accountID int64) error {
+	isAdmin, err := s.Roles.HasRole(tx, accountID, RoleAdmin)
+	if err != nil {
+		return err
+	}
+	if !isAdmin {
+		return nil // no role to revoke; idempotent
+	}
+	count, err := s.Roles.CountActiveAdmins(tx)
+	if err != nil {
+		return err
+	}
+	if count <= 1 {
+		return ErrLastAdmin
+	}
+	roleID, err := s.Roles.GetIDByName(tx, RoleAdmin)
+	if err != nil {
+		return err
+	}
+	return s.Roles.RevokeRole(tx, accountID, roleID)
+}
+
+// DeletePending hard-deletes a pending account. Returns ErrAccountNotPending if the account
+// is not in pending status, and ErrLastAdmin if the account is the last active admin.
+func (s AccountService) DeletePending(tx *pop.Connection, accountID int64) error {
+	account, err := s.Accounts.GetByID(tx, accountID)
+	if err != nil {
+		return err
+	}
+	if AccountStatus(account.Status) != StatusPending {
+		return ErrAccountNotPending
+	}
+	isAdmin, err := s.Roles.HasRole(tx, accountID, RoleAdmin)
+	if err != nil {
+		return err
+	}
+	if isAdmin {
+		count, err := s.Roles.CountActiveAdmins(tx)
+		if err != nil {
+			return err
+		}
+		if count <= 1 {
+			return ErrLastAdmin
+		}
+	}
+	return s.Accounts.Delete(tx, accountID)
 }
 
 func toAccountDTO(a *models.Account) *AccountDTO {

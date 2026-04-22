@@ -98,6 +98,54 @@ func App() *buffalo.App {
 			return c.Render(http.StatusOK, r.HTML("admin/index.plush.html"))
 		})
 
+		membershipSvc := services.MembershipService{
+			Membership: models.AccountStore{},
+		}
+		complianceSvc := services.ComplianceService{
+			Accounts:     models.AccountStore{},
+			Membership:   models.AccountStore{},
+			Roles:        models.AccountRoleStore{},
+			InviteTokens: models.InviteTokenStore{},
+			ResetTokens:  models.PasswordResetTokenStore{},
+			Sessions:     models.HTTPSessionStore{},
+		}
+
+		baseURL := envy.Get("APP_BASE_URL", "http://localhost:3000")
+
+		musicians := MusiciansHandler{
+			Accounts:    authSvc,
+			Membership:  membershipSvc,
+			Compliance:  complianceSvc,
+			Instruments: models.InstrumentStore{},
+			BaseURL:     baseURL,
+		}
+		profileH := ProfileHandler{Membership: membershipSvc}
+		retentionH := RetentionHandler{Compliance: complianceSvc}
+
+		// Musician admin routes
+		admin.GET("/musiciens", musicians.Index)
+		admin.GET("/musiciens/nouveau", musicians.New)
+		admin.POST("/musiciens", musicians.Create)
+		admin.GET("/musiciens/{id}", musicians.Show)
+		admin.GET("/musiciens/{id}/modifier", musicians.Edit)
+		admin.PUT("/musiciens/{id}", musicians.Update)
+		admin.DELETE("/musiciens/{id}", musicians.Delete)
+		admin.POST("/musiciens/{id}/anonymiser", musicians.Anonymize)
+		admin.POST("/musiciens/{id}/invitation", musicians.GenerateInviteLink)
+		admin.POST("/musiciens/{id}/reinitialisation", musicians.GenerateResetLink)
+		admin.POST("/musiciens/{id}/role-admin", musicians.GrantAdmin)
+		admin.DELETE("/musiciens/{id}/role-admin", musicians.RevokeAdmin)
+		admin.DELETE("/musiciens/{id}/consentement", musicians.WithdrawConsent)
+		admin.POST("/musiciens/{id}/restriction", musicians.ToggleProcessingRestriction)
+
+		// Retention review
+		admin.GET("/retention", retentionH.Index)
+
+		// Profile route (authenticated, not admin-only)
+		authenticated := app.Group("")
+		authenticated.Use(RequireActiveAccount(authSvc))
+		authenticated.GET("/profil", profileH.Show)
+
 		app.ServeFiles("/", http.FS(public.FS()))
 	})
 

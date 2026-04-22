@@ -43,6 +43,22 @@ func (s stubAccountRepo) Activate(_ *pop.Connection, _ int64, _ string, _ bool) 
 	return s.err
 }
 
+func (s stubAccountRepo) CreatePending(_ *pop.Connection, _ string, _ int64) (int64, error) {
+	return s.createdID, s.err
+}
+
+func (s stubAccountRepo) UpdateEmail(_ *pop.Connection, _ int64, _ string) error {
+	return s.err
+}
+
+func (s stubAccountRepo) Delete(_ *pop.Connection, _ int64) error {
+	return s.err
+}
+
+func (s stubAccountRepo) AnonymizeAccount(_ *pop.Connection, _ int64, _ string) error {
+	return s.err
+}
+
 // stubRoleRepo is a stub RoleRepository for unit tests.
 type stubRoleRepo struct {
 	hasActiveHolder bool
@@ -66,6 +82,18 @@ func (s stubRoleRepo) GetIDByName(_ *pop.Connection, _ string) (int64, error) {
 
 func (s stubRoleRepo) AssignRole(_ *pop.Connection, _, _ int64) error {
 	return s.assignErr
+}
+
+func (s stubRoleRepo) CountActiveAdmins(_ *pop.Connection) (int, error) {
+	return 0, nil
+}
+
+func (s stubRoleRepo) RevokeRole(_ *pop.Connection, _, _ int64) error {
+	return nil
+}
+
+func (s stubRoleRepo) RemoveAllRoles(_ *pop.Connection, _ int64) error {
+	return nil
 }
 
 // testArgon2Hash generates a PHC-format argon2id hash with minimal parameters for test speed.
@@ -234,6 +262,10 @@ func (s *stubInviteTokenRepo) InvalidateExisting(_ *pop.Connection, _ int64) err
 	return s.invalidateErr
 }
 
+func (s *stubInviteTokenRepo) FindActiveForAccount(_ *pop.Connection, _ int64) (*models.InviteToken, error) {
+	return nil, nil
+}
+
 type stubResetTokenRepo struct {
 	record           *models.PasswordResetTokenRecord
 	findErr          error
@@ -258,6 +290,10 @@ func (s *stubResetTokenRepo) MarkUsed(_ *pop.Connection, _ int64) error {
 func (s *stubResetTokenRepo) InvalidateExisting(_ *pop.Connection, _ int64) error {
 	s.invalidateCalled = true
 	return s.invalidateErr
+}
+
+func (s *stubResetTokenRepo) FindActiveForAccount(_ *pop.Connection, _ int64) (*models.PasswordResetToken, error) {
+	return nil, nil
 }
 
 // --- invite token tests ---

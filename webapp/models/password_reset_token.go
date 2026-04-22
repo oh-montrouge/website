@@ -69,3 +69,22 @@ func (PasswordResetTokenStore) InvalidateExisting(tx *pop.Connection, accountID 
 		`UPDATE password_reset_tokens SET used = true WHERE account_id = ? AND used = false`, accountID,
 	).Exec()
 }
+
+// FindActiveForAccount returns the current active (unused, non-expired) reset token for an account, or nil.
+func (PasswordResetTokenStore) FindActiveForAccount(tx *pop.Connection, accountID int64) (*PasswordResetToken, error) {
+	var tok PasswordResetToken
+	err := tx.RawQuery(`
+		SELECT id, account_id, token, expires_at, used
+		FROM password_reset_tokens
+		WHERE account_id = ? AND used = false AND expires_at > NOW()
+		ORDER BY expires_at DESC
+		LIMIT 1`, accountID,
+	).First(&tok)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &tok, nil
+}

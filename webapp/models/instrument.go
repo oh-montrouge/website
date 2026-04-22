@@ -4,7 +4,7 @@ import "github.com/gobuffalo/pop/v6"
 
 // Instrument represents a musical instrument from the controlled list.
 type Instrument struct {
-	ID   int    `db:"id"`
+	ID   int64  `db:"id"`
 	Name string `db:"name"`
 }
 

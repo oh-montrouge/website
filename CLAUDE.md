@@ -42,6 +42,19 @@ See `webapp/TESTING.md` for stub patterns, test app setup, and the integration t
 
 ---
 
+## HTML/CSS Quality — Tier 2
+
+Every implementation task touching `webapp/templates/` or `webapp/public/assets/` must:
+
+1. **Before implementing:** Read `webapp/FRONTEND.md`. Verify the planned change uses
+   existing CSS classes and component patterns. If a needed pattern is missing from the
+   design system, surface that before writing ad-hoc CSS or inline styles.
+
+2. **As part of DoD:** Run the pre-ship checklist in `webapp/FRONTEND.md` against all
+   modified templates.
+
+---
+
 # Design references
 
 Some plans may refer to a design (wireframes). Those are guidelines, not hard constraints. If the implementation sounds too complexe, stop and ask.

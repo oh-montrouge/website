@@ -1,0 +1,80 @@
+<div class="page-shell">
+    <div class="page-shell__header">
+        <div>
+            <nav aria-label="fil d'Ariane" class="breadcrumb">
+                <a href="/">Accueil</a>
+                <span class="breadcrumb__sep">›</span>
+                <span>Mon profil</span>
+            </nav>
+            <h1>Mon profil</h1>
+        </div>
+    </div>
+
+    <div style="max-width:480px;display:flex;flex-direction:column;gap:var(--sp-5)">
+        <section class="card">
+            <div class="card__header">
+                <h2>Informations personnelles</h2>
+            </div>
+            <div class="card__body">
+                <dl class="kv">
+                    <dt>Prénom</dt>
+                    <dd>
+                        <%= if (profile.FirstName != "") { %>
+                            <%= profile.FirstName %>
+                        <% } else { %>
+                            <span class="muted">—</span>
+                        <% } %>
+                    </dd>
+
+                    <dt>Nom</dt>
+                    <dd>
+                        <%= if (profile.LastName != "") { %>
+                            <%= profile.LastName %>
+                        <% } else { %>
+                            <span class="muted">—</span>
+                        <% } %>
+                    </dd>
+
+                    <dt>Instrument</dt>
+                    <dd><%= profile.MainInstrumentName %></dd>
+
+                    <dt>E-mail</dt>
+                    <dd><%= account.Email %></dd>
+
+                    <%= if (birthDateStr != "") { %>
+                    <dt>Date de naissance</dt>
+                    <dd><%= birthDateStr %></dd>
+                    <% } %>
+
+                    <%= if (profile.PhoneAddressConsent) { %>
+                        <%= if (profile.Phone != "") { %>
+                        <dt>Téléphone</dt>
+                        <dd><%= profile.Phone %></dd>
+                        <% } %>
+
+                        <%= if (profile.Address != "") { %>
+                        <dt>Adresse</dt>
+                        <dd><%= profile.Address %></dd>
+                        <% } %>
+                    <% } %>
+                </dl>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card__header">
+                <h2>Confidentialité</h2>
+            </div>
+            <div class="card__body">
+                <p>
+                    Pour toute demande concernant vos données personnelles (accès, rectification, effacement,
+                    restriction de traitement, retrait de consentement), contactez l'administration à
+                    <a href="mailto:oh.montrouge@gmail.com">oh.montrouge@gmail.com</a>.
+                </p>
+                <p>
+                    <a href="/politique-de-confidentialite">Consulter notre politique de confidentialité</a>
+                </p>
+            </div>
+        </section>
+    </div>
+</div>
