@@ -64,3 +64,18 @@ func (AccountStore) UpdatePasswordHash(tx *pop.Connection, id int64, hash string
 		hash, id,
 	).Exec()
 }
+
+// Activate transitions a pending account to active in a single UPDATE.
+// When phoneAddressConsent is false, phone and address are cleared.
+func (AccountStore) Activate(tx *pop.Connection, id int64, passwordHash string, phoneAddressConsent bool) error {
+	return tx.RawQuery(
+		`UPDATE accounts
+		 SET status = 'active',
+		     password_hash = ?,
+		     phone_address_consent = ?,
+		     phone    = CASE WHEN ? THEN phone    ELSE NULL END,
+		     address  = CASE WHEN ? THEN address  ELSE NULL END
+		 WHERE id = ?`,
+		passwordHash, phoneAddressConsent, phoneAddressConsent, phoneAddressConsent, id,
+	).Exec()
+}

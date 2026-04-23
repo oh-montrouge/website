@@ -129,6 +129,7 @@ column in `fee_payments` changes at anonymization time.
 | name | TEXT | No | — |
 | datetime | TIMESTAMPTZ | No | Stored as UTC. See ADR 002. |
 | event_type | TEXT | No | `concert` \| `rehearsal` \| `other` |
+| description | TEXT | Yes | — |
 
 ---
 

@@ -1,0 +1,67 @@
+<div class="login-shell" style="min-height: calc(100vh - var(--header-h))">
+    <%= partial("tokens/art.html") %>
+
+    <div class="login-shell__form">
+        <div class="breadcrumb">
+            <a href="/">Accueil</a>
+            <span class="breadcrumb__sep">›</span>
+            <span>Nouveau mot de passe</span>
+        </div>
+        <h1 style="font-size: 36px; margin-bottom: 8px">Réinitialiser le mot de passe</h1>
+        <p class="muted" style="margin-bottom: 32px">
+            Choisissez un nouveau mot de passe pour votre compte.
+        </p>
+
+        <%= if (passwordError != "") { %>
+        <div class="alert alert--danger" role="alert" style="margin-bottom: 16px">
+            <%= passwordError %>
+        </div>
+        <% } %>
+
+        <form
+            action="<%= formAction %>"
+            method="post"
+            class="stack"
+            style="--gap: 20px"
+        >
+            <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+
+            <div class="field">
+                <label class="field__label" for="password">
+                    Nouveau mot de passe <span class="req" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="input"
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    autofocus
+                    autocomplete="new-password"
+                    aria-describedby="password-hint"
+                />
+                <p class="field__hint" id="password-hint">
+                    22 caractères minimum — majuscule, minuscule, chiffre et caractère spécial.
+                </p>
+            </div>
+
+            <div class="field">
+                <label class="field__label" for="password_confirm">
+                    Confirmation du nouveau mot de passe <span class="req" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="input"
+                    type="password"
+                    id="password_confirm"
+                    name="password_confirm"
+                    required
+                    autocomplete="new-password"
+                />
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--lg" style="width: 100%">
+                Enregistrer le mot de passe
+            </button>
+        </form>
+    </div>
+</div>

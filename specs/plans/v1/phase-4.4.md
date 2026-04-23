@@ -24,7 +24,7 @@ Depends on: Phase 2 (independent of 4.2 and 4.3; can be implemented in parallel)
 ## Design Reference
 
 Wireframe screen: `AdminSeasonsScreen` (`admin-other.jsx`).
-Source: `specs/plans/v1/wireframes-extracted/test-on-ohl-website/project/`
+Source: `specs/plans/v1/wireframes/wireframes/project/`
 
 **Alpine.js usage in this phase:**
 - New season modal: `x-data="{ open: false }"` + `x-show="open"` on a `<dialog>` element;

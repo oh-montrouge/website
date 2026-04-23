@@ -59,8 +59,10 @@ func App() *buffalo.App {
 		app.Use(translations())
 
 		authSvc := services.AccountService{
-			Accounts: models.AccountStore{},
-			Roles:    models.AccountRoleStore{},
+			Accounts:     models.AccountStore{},
+			Roles:        models.AccountRoleStore{},
+			InviteTokens: models.InviteTokenStore{},
+			ResetTokens:  models.PasswordResetTokenStore{},
 		}
 
 		// Inject sheet_music_url into every request context (empty string when unset).
@@ -77,12 +79,17 @@ func App() *buffalo.App {
 
 		auth := AuthHandler{Accounts: authSvc, Sessions: models.HTTPSessionStore{}, DB: models.DB}
 		home := HomeHandler{}
+		tokens := TokensHandler{Accounts: authSvc, Sessions: models.HTTPSessionStore{}, DB: models.DB}
 
 		app.GET("/", home.Index)
 		app.GET("/politique-de-confidentialite", home.Privacy)
 		app.GET("/connexion", auth.Form)
 		app.POST("/connexion", auth.Submit)
 		app.GET("/deconnexion", auth.Logout)
+		app.GET("/invitation/{token}", tokens.InviteForm)
+		app.POST("/invitation/{token}", tokens.InviteSubmit)
+		app.GET("/reinitialiser-mot-de-passe/{token}", tokens.ResetForm)
+		app.POST("/reinitialiser-mot-de-passe/{token}", tokens.ResetSubmit)
 
 		admin := app.Group("/admin")
 		admin.Use(RequireActiveAccount(authSvc))
