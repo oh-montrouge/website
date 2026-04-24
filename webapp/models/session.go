@@ -11,3 +11,9 @@ func (HTTPSessionStore) BindAccount(db *pop.Connection, sessionKey string, accou
 		accountID, sessionKey,
 	).Exec()
 }
+
+func (HTTPSessionStore) DeleteByAccount(db *pop.Connection, accountID int64) error {
+	return db.RawQuery(
+		"DELETE FROM http_sessions WHERE account_id = ?", accountID,
+	).Exec()
+}

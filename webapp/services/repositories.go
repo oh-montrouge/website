@@ -24,6 +24,10 @@ type AccountRepository interface {
 	// Activate transitions a pending account to active in a single SQL UPDATE.
 	// Sets status, password_hash, phone_address_consent; clears phone/address when consent is false.
 	Activate(tx *pop.Connection, id int64, passwordHash string, phoneAddressConsent bool) error
+	CreatePending(tx *pop.Connection, email string, instrumentID int64) (int64, error)
+	UpdateEmail(tx *pop.Connection, id int64, email string) error
+	Delete(tx *pop.Connection, id int64) error
+	AnonymizeAccount(tx *pop.Connection, id int64, token string) error
 }
 
 // InviteTokenRepository is the interface for invite token persistence.
@@ -38,6 +42,8 @@ type InviteTokenRepository interface {
 	MarkUsed(tx *pop.Connection, tokenID int64) error
 	// InvalidateExisting marks all unused tokens for the account as used.
 	InvalidateExisting(tx *pop.Connection, accountID int64) error
+	// FindActiveForAccount returns the current active (unused, non-expired) invite token, or nil.
+	FindActiveForAccount(tx *pop.Connection, accountID int64) (*models.InviteToken, error)
 }
 
 // PasswordResetTokenRepository is the interface for password reset token persistence.
@@ -52,12 +58,15 @@ type PasswordResetTokenRepository interface {
 	MarkUsed(tx *pop.Connection, tokenID int64) error
 	// InvalidateExisting marks all unused tokens for the account as used.
 	InvalidateExisting(tx *pop.Connection, accountID int64) error
+	// FindActiveForAccount returns the current active (unused, non-expired) reset token, or nil.
+	FindActiveForAccount(tx *pop.Connection, accountID int64) (*models.PasswordResetToken, error)
 }
 
 // SessionRepository is the interface the auth handler depends on to link a session to an account.
 // The real implementation is models.HTTPSessionStore; tests inject stubs or nil.
 type SessionRepository interface {
 	BindAccount(db *pop.Connection, sessionKey string, accountID int64) error
+	DeleteByAccount(db *pop.Connection, accountID int64) error
 }
 
 // RoleRepository is the interface services depend on to check role membership.
@@ -67,12 +76,24 @@ type RoleRepository interface {
 	HasActiveRoleHolder(tx *pop.Connection, roleName string) (bool, error)
 	GetIDByName(tx *pop.Connection, name string) (int64, error)
 	AssignRole(tx *pop.Connection, accountID, roleID int64) error
+	CountActiveAdmins(tx *pop.Connection) (int, error)
+	RevokeRole(tx *pop.Connection, accountID, roleID int64) error
+	RemoveAllRoles(tx *pop.Connection, accountID int64) error
 }
 
 // MembershipRepository is the interface MembershipService and ComplianceService depend on
-// to access and mutate musician profile data.
-// The real implementation will be added to models.AccountStore in Phase 4.3.
-//
-// TODO(phase-4.3): add methods as musician management features are implemented.
-// Expected: GetProfile, UpdateProfile, ListActive, ListForRetentionReview, ClearProfileFields.
-type MembershipRepository any // TODO(phase-4.3): define methods as musician management features are implemented
+// to access and mutate musician profile data. Implemented by models.AccountStore.
+type MembershipRepository interface {
+	GetProfile(tx *pop.Connection, accountID int64) (*models.MusicianProfileRow, error)
+	SetProfile(tx *pop.Connection, accountID int64, firstName, lastName string, birthDate *time.Time, parentalConsentURI string) error
+	// UpdateProfile includes email and instrumentID despite those being I&A fields on the
+	// accounts table. Keeping them here avoids handler-level composition for the single-intent
+	// "edit profile" form. AccountRepository.UpdateEmail exists but is intentionally unused
+	// for this path.
+	UpdateProfile(tx *pop.Connection, accountID int64, firstName, lastName, email string, instrumentID int64, birthDate *time.Time, parentalConsentURI, phone, address string) error
+	ListNonAnonymized(tx *pop.Connection) ([]models.MusicianListRow, error)
+	ListForRetentionReview(tx *pop.Connection) ([]models.RetentionRow, error)
+	ClearMembershipFields(tx *pop.Connection, accountID int64) error
+	WithdrawConsent(tx *pop.Connection, accountID int64) error
+	ToggleProcessingRestriction(tx *pop.Connection, accountID int64) error
+}

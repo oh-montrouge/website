@@ -1,0 +1,49 @@
+<div class="page-shell">
+    <div class="page-shell__header">
+        <div>
+            <nav aria-label="fil d'Ariane" class="breadcrumb">
+                <a href="/admin/">Administration</a>
+                <span class="breadcrumb__sep">›</span>
+                <span>Revue de rétention</span>
+            </nav>
+            <h1>Revue de rétention des données</h1>
+        </div>
+    </div>
+    <p class="muted" style="margin-bottom:var(--sp-5)">
+        Comptes dont la dernière saison cotisée date de plus de 5 ans.
+        Ces données peuvent être anonymisées conformément à notre politique de conservation.
+    </p>
+
+    <%= if (len(entries) == 0) { %>
+    <div class="card">
+        <div class="card__body" style="text-align:center">
+            <p class="muted">Aucun compte ne dépasse la durée de rétention de 5 ans.</p>
+        </div>
+    </div>
+    <% } else { %>
+    <table class="table" aria-label="Comptes à réviser">
+        <thead>
+            <tr>
+                <th scope="col">Nom</th>
+                <th scope="col">Instrument</th>
+                <th scope="col">Dernière saison</th>
+                <th scope="col">Fin de saison</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            <%= for (e) in entries { %>
+            <tr>
+                <td data-label="Nom"><%= e.LastName %> <%= e.FirstName %></td>
+                <td data-label="Instrument"><%= e.MainInstrumentName %></td>
+                <td data-label="Dernière saison"><%= e.LastSeasonLabel %></td>
+                <td data-label="Fin de saison"><%= e.LastSeasonEndDate.Format("02/01/2006") %></td>
+                <td data-label="">
+                    <a href="/admin/musiciens/<%= e.AccountID %>" class="btn btn--ghost btn--sm">Voir la fiche</a>
+                </td>
+            </tr>
+            <% } %>
+        </tbody>
+    </table>
+    <% } %>
+</div>

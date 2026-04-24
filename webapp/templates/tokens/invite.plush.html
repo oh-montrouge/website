@@ -2,24 +2,26 @@
     <%= partial("tokens/art.html") %>
 
     <div class="login-shell__form">
-        <div class="breadcrumb">
+        <nav aria-label="fil d'Ariane" class="breadcrumb">
             <a href="/">Accueil</a>
             <span class="breadcrumb__sep">›</span>
             <span>Créer mon compte</span>
-        </div>
-        <h1 style="font-size: 36px; margin-bottom: 8px">Bienvenue, <%= invite.FirstName %> !</h1>
-        <p class="muted" style="margin-bottom: 24px">
+        </nav>
+        <h1 style="font-size:var(--fs-32);margin-bottom:var(--sp-2)">Bienvenue, <%= invite.FirstName %> !</h1>
+        <p class="muted" style="margin-bottom:var(--sp-6)">
             Choisissez un mot de passe pour activer votre compte musicien.
         </p>
 
-        <div class="card" style="margin-bottom: 24px; padding: 16px">
-            <div style="font-weight: 600"><%= invite.FirstName %> <%= invite.LastName %></div>
-            <div class="muted" style="font-size: 14px"><%= invite.Email %></div>
-            <div class="muted" style="font-size: 14px"><%= invite.InstrumentName %></div>
+        <div class="card" style="margin-bottom:var(--sp-6)">
+            <div class="card__body">
+                <div style="font-weight:600"><%= invite.FirstName %> <%= invite.LastName %></div>
+                <div class="muted" style="font-size:var(--fs-14)"><%= invite.Email %></div>
+                <div class="muted" style="font-size:var(--fs-14)"><%= invite.InstrumentName %></div>
+            </div>
         </div>
 
         <%= if (passwordError != "") { %>
-        <div class="alert alert--danger" role="alert" style="margin-bottom: 16px">
+        <div class="alert alert--danger" role="alert" style="margin-bottom:var(--sp-4)">
             <%= passwordError %>
         </div>
         <% } %>
@@ -28,7 +30,7 @@
             action="<%= formAction %>"
             method="post"
             class="stack"
-            style="--gap: 20px"
+            style="--gap:var(--sp-5)"
             x-data="{ consentPrivacy: false }"
         >
             <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
@@ -98,7 +100,7 @@
             <button
                 type="submit"
                 class="btn btn--primary btn--lg"
-                style="width: 100%"
+                style="width:100%"
                 :disabled="!consentPrivacy"
             >
                 Créer mon compte

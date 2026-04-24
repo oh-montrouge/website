@@ -257,6 +257,44 @@ func TestLoadCurrentAccount_PendingAccount_DoesNotSetCurrentAccount(t *testing.T
 	assert.Equal(t, http.StatusOK, res.Code)
 }
 
+func TestLoadCurrentAccount_AdminAccount_SetsIsAdmin(t *testing.T) {
+	svc := stubMiddlewareAuth{account: &services.AccountDTO{ID: 42, Status: services.StatusActive}, isAdmin: true}
+	app := newTestApp(func(a *buffalo.App) {
+		a.Use(injectSession("account_id", int64(42)))
+		a.Use(LoadCurrentAccount(svc))
+		a.GET("/", func(c buffalo.Context) error {
+			isAdmin, ok := c.Value("is_admin").(bool)
+			assert.True(t, ok)
+			assert.True(t, isAdmin)
+			return c.Render(http.StatusOK, r.String("ok"))
+		})
+	})
+
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	assert.Equal(t, http.StatusOK, res.Code)
+}
+
+func TestLoadCurrentAccount_NonAdminAccount_IsAdminFalse(t *testing.T) {
+	svc := stubMiddlewareAuth{account: &services.AccountDTO{ID: 42, Status: services.StatusActive}, isAdmin: false}
+	app := newTestApp(func(a *buffalo.App) {
+		a.Use(injectSession("account_id", int64(42)))
+		a.Use(LoadCurrentAccount(svc))
+		a.GET("/", func(c buffalo.Context) error {
+			isAdmin, ok := c.Value("is_admin").(bool)
+			assert.True(t, ok)
+			assert.False(t, isAdmin)
+			return c.Render(http.StatusOK, r.String("ok"))
+		})
+	})
+
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	assert.Equal(t, http.StatusOK, res.Code)
+}
+
 func TestLoadCurrentAccount_AccountNotFound_PassesThrough(t *testing.T) {
 	svc := stubMiddlewareAuth{err: sql.ErrNoRows}
 	app := newTestApp(func(a *buffalo.App) {

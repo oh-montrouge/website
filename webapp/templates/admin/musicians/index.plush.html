@@ -1,0 +1,63 @@
+<div class="page-shell">
+    <div class="page-shell__header">
+        <div>
+            <nav aria-label="fil d'Ariane" class="breadcrumb">
+                <a href="/admin/">Administration</a>
+                <span class="breadcrumb__sep">›</span>
+                <span>Musiciens</span>
+            </nav>
+            <h1>Musiciens</h1>
+        </div>
+        <a href="/admin/musiciens/nouveau" class="btn btn--primary">+ Nouveau musicien</a>
+    </div>
+
+    <table class="table" aria-label="Liste des musiciens">
+        <thead>
+            <tr>
+                <th scope="col">Nom</th>
+                <th scope="col">Instrument</th>
+                <th scope="col">Statut</th>
+                <th scope="col">Rôle</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            <%= for (m) in musicians { %>
+            <tr>
+                <td data-label="Nom">
+                    <%= if (m.Status == "anonymized") { %>
+                        <span class="muted"><%= m.AnonymizationToken %></span>
+                    <% } else if (m.LastName != "" || m.FirstName != "") { %>
+                        <%= m.LastName %> <%= m.FirstName %>
+                    <% } else { %>
+                        <span class="muted">—</span>
+                    <% } %>
+                </td>
+                <td data-label="Instrument"><%= m.MainInstrumentName %></td>
+                <td data-label="Statut">
+                    <%= if (m.Status == "active") { %>
+                        <span class="badge badge--ok">Actif</span>
+                    <% } else if (m.Status == "pending") { %>
+                        <span class="badge badge--warn">En attente</span>
+                    <% } else { %>
+                        <span class="badge badge--neutral"><%= m.Status %></span>
+                    <% } %>
+                </td>
+                <td data-label="Rôle">
+                    <%= if (m.IsAdmin) { %>
+                        <span class="badge badge--info">Admin</span>
+                    <% } %>
+                </td>
+                <td data-label="">
+                    <a href="/admin/musiciens/<%= m.AccountID %>" class="btn btn--ghost btn--sm">Voir</a>
+                </td>
+            </tr>
+            <% } %>
+            <%= if (len(musicians) == 0) { %>
+            <tr>
+                <td data-label="" colspan="5" class="muted" style="text-align:center;padding:var(--sp-6)">Aucun musicien.</td>
+            </tr>
+            <% } %>
+        </tbody>
+    </table>
+</div>

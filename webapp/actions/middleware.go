@@ -34,6 +34,8 @@ func LoadCurrentAccount(svc services.AccountAuthenticator) buffalo.MiddlewareFun
 			}
 			if account.Status == services.StatusActive {
 				c.Set("current_account", account)
+				isAdmin, _ := svc.IsAdmin(tx, account.ID)
+				c.Set("is_admin", isAdmin)
 			}
 			return next(c)
 		}

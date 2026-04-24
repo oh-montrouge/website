@@ -26,6 +26,7 @@ func newTestApp(register func(*buffalo.App)) http.Handler {
 	a.Use(func(next buffalo.Handler) buffalo.Handler {
 		return func(c buffalo.Context) error {
 			c.Set("authenticity_token", "") // layout requires this CSRF placeholder
+			c.Set("sheet_music_url", "")    // layout requires this; tests override with injectContextValue
 			c.Set("tx", (*pop.Connection)(nil))
 			return next(c)
 		}

@@ -45,7 +45,7 @@ and its service. See `specs/architecture/context-map.md` for full detail.
 
 **Context:** Identity & Access
 
-**Status:** Phase 4.2 complete.
+**Status:** Phase 4.3 complete.
 
 | Method | Phase | Notes |
 |--------|-------|-------|
@@ -54,13 +54,18 @@ and its service. See `specs/architecture/context-map.md` for full detail.
 | `IsAdmin` | 2 | Role check via `RoleRepository` |
 | `CreateAdmin` | 2 | Grift use only; refuses if active admin exists |
 | `ResetPassword` | 2 | Force-reset for grift use |
-| `CreatePending` | 4.3 | Admin creates musician; status=pending; no password |
-| `GenerateInviteToken` | 4.2 | CSPRNG token stored in `invite_tokens`; invalidates existing |
-| `ValidateInviteToken` | 4.2 | Checks unused+unexpired+pending account |
-| `CompleteInvite` | 4.2 | Activates account, sets password + consent, marks token used; gains EventRepository dep in 4.6 for RSVP seeding |
-| `GeneratePasswordResetToken` | 4.2 | Active accounts only; invalidates existing |
-| `ValidatePasswordResetToken` | 4.2 | Checks unused+unexpired+active account |
-| `CompletePasswordReset` | 4.2 | Updates password, marks token used |
+| `CreatePending` | 4.3 ✅ | Admin creates musician; status=pending; no password |
+| `GenerateInviteToken` | 4.2 ✅ | CSPRNG token stored in `invite_tokens`; invalidates existing |
+| `ValidateInviteToken` | 4.2 ✅ | Checks unused+unexpired+pending account |
+| `CompleteInvite` | 4.2 ✅ | Activates account, sets password + consent, marks token used; gains EventRepository dep in 4.6 for RSVP seeding |
+| `GeneratePasswordResetToken` | 4.2 ✅ | Active accounts only; invalidates existing |
+| `ValidatePasswordResetToken` | 4.2 ✅ | Checks unused+unexpired+active account |
+| `CompletePasswordReset` | 4.2 ✅ | Updates password, marks token used |
+| `GetActiveInviteToken` | 4.3 ✅ | Returns active invite token DTO or nil |
+| `GetActivePasswordResetToken` | 4.3 ✅ | Returns active reset token DTO or nil |
+| `GrantAdmin` | 4.3 ✅ | Idempotent; no last-admin protection needed on grant |
+| `RevokeAdmin` | 4.3 ✅ | Last-admin protection check before mutation |
+| `DeletePending` | 4.3 ✅ | Rejects non-pending accounts; last-admin protection check |
 
 **Repository deps:** `AccountRepository`, `RoleRepository`, `InviteTokenRepository`,
 `PasswordResetTokenRepository`, `EventRepository` (4.6 only, for RSVP seeding).
@@ -71,16 +76,16 @@ and its service. See `specs/architecture/context-map.md` for full detail.
 
 **Context:** Membership
 
-**Status:** Stub. Implement in Phase 4.3.
+**Status:** Phase 4.3 complete.
 
 | Method | Phase | Notes |
 |--------|-------|-------|
-| `GetProfile` | 4.3 | |
-| `SetInitialProfile` | 4.3 | Called by handler on musician creation (after AccountService.CreatePending) |
-| `UpdateProfile` | 4.3 | Validates under-15 rule |
-| `ListActive` | 4.3 | For musician list page |
-| `ConsentWithdrawal` | 4.3 | Clears phone + address + consent flag |
-| `ToggleProcessingRestriction` | 4.3 | |
+| `GetProfile` | 4.3 ✅ | Returns `MusicianProfile` DTO |
+| `SetInitialProfile` | 4.3 ✅ | Called by handler on musician creation (after AccountService.CreatePending) |
+| `UpdateProfile` | 4.3 ✅ | Validates under-15 rule; phone/address only mutated when consent flag is set |
+| `ListNonAnonymized` | 4.3 ✅ | For musician list page; excludes anonymized accounts |
+| `ConsentWithdrawal` | 4.3 ✅ | Clears phone + address + consent flag |
+| `ToggleProcessingRestriction` | 4.3 ✅ | |
 
 **Repository deps:** `MembershipRepository`
 
@@ -90,12 +95,12 @@ and its service. See `specs/architecture/context-map.md` for full detail.
 
 **Context:** Compliance (cross-cutting)
 
-**Status:** Stub. Implement in Phase 4.3.
+**Status:** Phase 4.3 complete.
 
 | Method | Phase | Notes |
 |--------|-------|-------|
-| `Anonymize` | 4.3 | Atomic: clear I&A fields + Membership fields + roles + tokens + sessions + RSVPs (4.6) |
-| `RetentionReviewList` | 4.3 | Accounts past 5-year retention period |
+| `Anonymize` | 4.3 ✅ | Atomic: clear I&A fields + Membership fields + roles + tokens + sessions + RSVPs (4.6). Last-admin protection before any mutation. |
+| `RetentionReviewList` | 4.3 ✅ | Accounts past 5-year retention period |
 
 **Repository deps:** `AccountRepository`, `MembershipRepository`, `RoleRepository`,
 `InviteTokenRepository`, `PasswordResetTokenRepository`, `SessionRepository`,
@@ -180,9 +185,9 @@ provides the production implementations. Tests inject stubs.
   UPDATE that atomically sets `status='active'`, `password_hash`, `phone_address_consent`,
   and conditionally clears `phone`/`address`
 
-**`MembershipRepository` (Phase 4.3):** Replace the `any` placeholder with methods:
-`GetProfile`, `UpdateProfile`, `ListActive`, `ListForRetentionReview`, `ClearProfileFields`,
-`SetConsent`, `ToggleProcessingRestriction`
+**`MembershipRepository` (Phase 4.3 ✅):** Replaces the `any` placeholder. Methods:
+`GetProfile`, `SetProfile`, `UpdateProfile`, `ListNonAnonymized`, `ListForRetentionReview`,
+`ClearMembershipFields`, `WithdrawConsent`, `ToggleProcessingRestriction`
 
 ### New interfaces
 
@@ -208,9 +213,9 @@ registration in `app.go`.
 | `middleware.go` | 2 | — | `AccountAuthenticator` |
 | `home.go` | 2/4.1 | `HomeHandler` | — |
 | `tokens.go` | 4.2 ✅ | `TokensHandler` | `AccountTokenManager`, `SessionRepository` |
-| `musicians.go` | 4.3 | `MusiciansHandler` | `AccountService`, `MembershipService`, `ComplianceService`, `InstrumentRepository` |
-| `profile.go` | 4.3 | `ProfileHandler` | `MembershipService` |
-| `retention.go` | 4.3 | `RetentionHandler` | `ComplianceService` |
+| `musicians.go` | 4.3 ✅ | `MusiciansHandler` | `AccountAdminManager`, `MusicianProfileManager`, `ComplianceManager`, `InstrumentRepository` |
+| `profile.go` | 4.3 ✅ | `ProfileHandler` | `MusicianProfileManager` |
+| `retention.go` | 4.3 ✅ | `RetentionHandler` | `ComplianceManager` |
 | `seasons.go` | 4.4 | `SeasonsHandler` | `SeasonService` |
 | `fee_payments.go` | 4.5 | `FeePaymentsHandler` | `FeePaymentService` |
 | `events.go` | 4.6 | `EventsHandler` | `EventService` |

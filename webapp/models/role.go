@@ -59,3 +59,28 @@ func (AccountRoleStore) AssignRole(tx *pop.Connection, accountID, roleID int64) 
 		accountID, roleID,
 	).Exec()
 }
+
+func (AccountRoleStore) CountActiveAdmins(tx *pop.Connection) (int, error) {
+	var res countResult
+	err := tx.RawQuery(`
+		SELECT COUNT(*) AS count
+		FROM account_roles ar
+		JOIN roles r ON r.id = ar.role_id
+		JOIN accounts a ON a.id = ar.account_id
+		WHERE r.name = 'admin' AND a.status = 'active'`,
+	).First(&res)
+	return res.N, err
+}
+
+func (AccountRoleStore) RevokeRole(tx *pop.Connection, accountID, roleID int64) error {
+	return tx.RawQuery(
+		`DELETE FROM account_roles WHERE account_id = ? AND role_id = ?`,
+		accountID, roleID,
+	).Exec()
+}
+
+func (AccountRoleStore) RemoveAllRoles(tx *pop.Connection, accountID int64) error {
+	return tx.RawQuery(
+		`DELETE FROM account_roles WHERE account_id = ?`, accountID,
+	).Exec()
+}
