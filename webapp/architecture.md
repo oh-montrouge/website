@@ -112,9 +112,11 @@ See `specs/technical-adrs/007-account-musician-dtos.md`.
 
 ---
 
-### SeasonService (`services/season.go`) — new in Phase 4.4
+### SeasonService (`services/season.go`)
 
 **Context:** Membership
+
+**Status:** Phase 4.4 ✅
 
 | Method | Notes |
 |--------|-------|
@@ -195,7 +197,7 @@ provides the production implementations. Tests inject stubs.
 |-----------|-------|---------------|
 | `InviteTokenRepository` | 4.2 ✅ | `models.InviteTokenStore` |
 | `PasswordResetTokenRepository` | 4.2 ✅ | `models.PasswordResetTokenStore` |
-| `SeasonRepository` | 4.4 | `models.SeasonStore` |
+| `SeasonRepository` | 4.4 ✅ | `models.SeasonStore` |
 | `FeePaymentRepository` | 4.5 | `models.FeePaymentStore` |
 | `EventRepository` | 4.6 | `models.EventStore` |
 | `RSVPRepository` | 4.6 | `models.RSVPStore` |
@@ -216,7 +218,7 @@ registration in `app.go`.
 | `musicians.go` | 4.3 ✅ | `MusiciansHandler` | `AccountAdminManager`, `MusicianProfileManager`, `ComplianceManager`, `InstrumentRepository` |
 | `profile.go` | 4.3 ✅ | `ProfileHandler` | `MusicianProfileManager` |
 | `retention.go` | 4.3 ✅ | `RetentionHandler` | `ComplianceManager` |
-| `seasons.go` | 4.4 | `SeasonsHandler` | `SeasonService` |
+| `seasons.go` | 4.4 ✅ | `SeasonsHandler` | `SeasonService` |
 | `fee_payments.go` | 4.5 | `FeePaymentsHandler` | `FeePaymentService` |
 | `events.go` | 4.6 | `EventsHandler` | `EventService` |
 

@@ -65,6 +65,10 @@ func App() *buffalo.App {
 			ResetTokens:  models.PasswordResetTokenStore{},
 		}
 
+		seasonSvc := services.SeasonService{
+			Seasons: models.SeasonStore{},
+		}
+
 		// Inject sheet_music_url into every request context (empty string when unset).
 		sheetMusicURL := envy.Get("SHEET_MUSIC_URL", "")
 		app.Use(func(next buffalo.Handler) buffalo.Handler {
@@ -80,6 +84,7 @@ func App() *buffalo.App {
 		auth := AuthHandler{Accounts: authSvc, Sessions: models.HTTPSessionStore{}, DB: models.DB}
 		home := HomeHandler{}
 		tokens := TokensHandler{Accounts: authSvc, Sessions: models.HTTPSessionStore{}, DB: models.DB}
+		seasons := SeasonsHandler{Seasons: seasonSvc}
 
 		app.GET("/", home.Index)
 		app.GET("/politique-de-confidentialite", home.Privacy)
@@ -145,6 +150,10 @@ func App() *buffalo.App {
 		authenticated := app.Group("")
 		authenticated.Use(RequireActiveAccount(authSvc))
 		authenticated.GET("/profil", profileH.Show)
+
+		admin.GET("/saisons", seasons.Index)
+		admin.POST("/saisons", seasons.Create)
+		admin.POST("/saisons/{id}/courante", seasons.DesignateCurrent)
 
 		app.ServeFiles("/", http.FS(public.FS()))
 	})

@@ -57,6 +57,7 @@ dir = "webapp"
 run = """
 docker compose exec -T postgres psql -U ohm ohm_development < ../db/dummy-data/01_accounts.sql
 docker compose exec -T postgres psql -U ohm ohm_development < ../db/dummy-data/02_account_roles.sql
+docker compose exec -T postgres psql -U ohm ohm_development < ../db/dummy-data/03_seasons.sql
 """
 
 [tasks.test]

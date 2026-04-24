@@ -1,0 +1,106 @@
+<div class="page"
+     x-data="{ createOpen: <%= createOpen %> }"
+     x-init="createOpen && $nextTick(() => $refs.seasonDialog.showModal())">
+    <div class="page__header">
+        <div class="page__title">
+            <h1>Saisons</h1>
+            <p>Une saison correspond à une période de cotisation annuelle. Immuable après création.</p>
+        </div>
+        <div class="page__actions">
+            <button class="btn btn--primary" type="button" @click="$refs.seasonDialog.showModal()">+ Nouvelle saison</button>
+        </div>
+    </div>
+
+    <div class="card" style="overflow: hidden">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Libellé</th>
+                    <th>Début</th>
+                    <th>Fin</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <%= for (s) in seasons { %>
+                <tr>
+                    <td data-label="Saison">
+                        <strong><%= s.Label %></strong>
+                        <%= if (s.IsCurrent) { %>
+                        <span class="badge badge--ok" style="margin-left: 10px">● Saison courante</span>
+                        <% } %>
+                    </td>
+                    <td data-label="Début"><%= s.StartDate.Format("02/01/2006") %></td>
+                    <td data-label="Fin"><%= s.EndDate.Format("02/01/2006") %></td>
+                    <td class="table__actions">
+                        <%= if (!s.IsCurrent) { %>
+                        <form method="post" action="/admin/saisons/<%= s.ID %>/courante">
+                            <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+                            <button type="submit" class="btn btn--sm btn--ghost">Désigner comme courante</button>
+                        </form>
+                        <% } %>
+                    </td>
+                </tr>
+                <% } %>
+                <%= if (seasonsEmpty) { %>
+                <tr>
+                    <td colspan="4" class="muted" style="text-align: center; padding: 24px">
+                        Aucune saison. Créez-en une pour commencer.
+                    </td>
+                </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+
+    <dialog x-ref="seasonDialog"
+            aria-modal="true"
+            aria-labelledby="season-modal-title"
+            style="padding: var(--sp-5); border: 1px solid var(--line); border-radius: var(--r-3); max-width: 480px; width: 90%">
+        <form method="post" action="/admin/saisons">
+            <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+            <h3 id="season-modal-title" style="margin-bottom: var(--sp-4)">Nouvelle saison</h3>
+            <div class="stack" style="--gap: 14px">
+                <div class="field">
+                    <label class="field__label" for="label">
+                        Libellé <span class="req" aria-hidden="true">*</span>
+                    </label>
+                    <input
+                        class="input"
+                        type="text"
+                        id="label"
+                        name="label"
+                        placeholder="2026-2027"
+                        required
+                    />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+                    <div class="field">
+                        <label class="field__label" for="start_date">
+                            Début <span class="req" aria-hidden="true">*</span>
+                        </label>
+                        <input class="input" type="date" id="start_date" name="start_date" required />
+                    </div>
+                    <div class="field">
+                        <label class="field__label" for="end_date">
+                            Fin <span class="req" aria-hidden="true">*</span>
+                        </label>
+                        <input class="input" type="date" id="end_date" name="end_date" required />
+                    </div>
+                </div>
+                <%= if (createError != "") { %>
+                <div class="alert alert--danger" role="alert">
+                    <%= createError %>
+                </div>
+                <% } %>
+                <div class="alert alert--info">
+                    <span style="font-size: 13px">La nouvelle saison ne sera pas désignée courante automatiquement.</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: var(--sp-3); justify-content: flex-end; margin-top: var(--sp-5)">
+                <button type="button" class="btn btn--ghost" @click="$refs.seasonDialog.close()">Annuler</button>
+                <button type="submit" class="btn btn--primary">Créer</button>
+            </div>
+        </form>
+    </dialog>
+</div>
