@@ -97,3 +97,11 @@ type MembershipRepository interface {
 	WithdrawConsent(tx *pop.Connection, accountID int64) error
 	ToggleProcessingRestriction(tx *pop.Connection, accountID int64) error
 }
+
+// SeasonRepository is the interface SeasonService depends on to access season data.
+// The real implementation is models.SeasonStore; tests inject stubs.
+type SeasonRepository interface {
+	Create(tx *pop.Connection, label string, startDate, endDate time.Time) (int64, error)
+	List(tx *pop.Connection) (models.Seasons, error)
+	DesignateCurrent(tx *pop.Connection, id int64) error
+}
