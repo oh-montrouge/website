@@ -190,8 +190,10 @@ func TestMusiciansHandler_Show_RendersProfile(t *testing.T) {
 		MainInstrumentName: "Clarinette",
 	}
 	h := MusiciansHandler{
-		Accounts:   &stubAccountAdmin{account: account},
-		Membership: &stubMusicianProfile{profile: profile},
+		Accounts:    &stubAccountAdmin{account: account},
+		Membership:  &stubMusicianProfile{profile: profile},
+		FeePayments: &stubFeePaymentManager{},
+		Seasons:     stubSeasonManager{},
 	}
 	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
 		a.GET("/admin/musiciens/{id}", h.Show)

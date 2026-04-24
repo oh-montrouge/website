@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"time"
 
 	"ohmontrouge/webapp/public"
@@ -18,6 +19,7 @@ func init() {
 		AssetsFS:    public.FS(),
 		Helpers: render.Helpers{
 			"currentYear": func() int { return time.Now().Year() },
+			"fmtAmount":   func(amount float64) string { return fmt.Sprintf("%.2f", amount) },
 		},
 	})
 }

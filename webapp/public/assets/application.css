@@ -112,6 +112,9 @@ li + li { margin-top: var(--sp-2); }
 .btn--sm { height: 30px; padding: 0 10px; font-size: var(--fs-13); }
 .btn--lg { height: 46px; padding: 0 22px; font-size: var(--fs-15); }
 .btn[disabled] { opacity: .5; cursor: not-allowed; }
+/* <summary> used as a disclosure toggle styled as a button — hide the native marker */
+summary.btn { list-style: none; }
+summary.btn::-webkit-details-marker { display: none; }
 
 /* Form fields */
 .field { display: flex; flex-direction: column; gap: 6px; }

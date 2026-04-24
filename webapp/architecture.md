@@ -128,9 +128,11 @@ See `specs/technical-adrs/007-account-musician-dtos.md`.
 
 ---
 
-### FeePaymentService (`services/fee_payment.go`) — new in Phase 4.5
+### FeePaymentService (`services/fee_payment.go`)
 
 **Context:** Membership
+
+**Status:** Phase 4.5 ✅
 
 | Method | Notes |
 |--------|-------|
@@ -138,6 +140,7 @@ See `specs/technical-adrs/007-account-musician-dtos.md`.
 | `Update` | |
 | `Delete` | |
 | `ListByAccount` | |
+| `GetByID` | For edit form |
 | `GetFirstInscriptionDate` | Derived: MIN(payment_date) |
 
 **Repository deps:** `FeePaymentRepository`
@@ -198,7 +201,7 @@ provides the production implementations. Tests inject stubs.
 | `InviteTokenRepository` | 4.2 ✅ | `models.InviteTokenStore` |
 | `PasswordResetTokenRepository` | 4.2 ✅ | `models.PasswordResetTokenStore` |
 | `SeasonRepository` | 4.4 ✅ | `models.SeasonStore` |
-| `FeePaymentRepository` | 4.5 | `models.FeePaymentStore` |
+| `FeePaymentRepository` | 4.5 ✅ | `models.FeePaymentStore` |
 | `EventRepository` | 4.6 | `models.EventStore` |
 | `RSVPRepository` | 4.6 | `models.RSVPStore` |
 
@@ -215,11 +218,11 @@ registration in `app.go`.
 | `middleware.go` | 2 | — | `AccountAuthenticator` |
 | `home.go` | 2/4.1 | `HomeHandler` | — |
 | `tokens.go` | 4.2 ✅ | `TokensHandler` | `AccountTokenManager`, `SessionRepository` |
-| `musicians.go` | 4.3 ✅ | `MusiciansHandler` | `AccountAdminManager`, `MusicianProfileManager`, `ComplianceManager`, `InstrumentRepository` |
+| `musicians.go` | 4.3 ✅ | `MusiciansHandler` | `AccountAdminManager`, `MusicianProfileManager`, `ComplianceManager`, `InstrumentRepository`, `FeePaymentManager` (4.5 ✅), `SeasonManager` (4.5 ✅) |
 | `profile.go` | 4.3 ✅ | `ProfileHandler` | `MusicianProfileManager` |
 | `retention.go` | 4.3 ✅ | `RetentionHandler` | `ComplianceManager` |
 | `seasons.go` | 4.4 ✅ | `SeasonsHandler` | `SeasonService` |
-| `fee_payments.go` | 4.5 | `FeePaymentsHandler` | `FeePaymentService` |
+| `fee_payments.go` | 4.5 ✅ | `FeePaymentsHandler` | `FeePaymentService` |
 | `events.go` | 4.6 | `EventsHandler` | `EventService` |
 
 ---
@@ -240,7 +243,7 @@ construction. See `specs/technical-adrs/007-account-musician-dtos.md`.
 | `MusicianProfileSummary` | `musician.go` | Membership | AccountID, Name, Instrument, Status |
 | `RetentionEntryDTO` | `musician.go` | Membership | AccountID, Name, Instrument, LastSeasonLabel, LastSeasonEndDate |
 | `SeasonDTO` | `season.go` | Membership | ID, Label, StartDate, EndDate, IsCurrent |
-| `FeePaymentDTO` | `fee_payment.go` | Membership | ID, AccountID, SeasonID, SeasonLabel, PaymentDate, Amount |
+| `FeePaymentDTO` | `fee_payment.go` | Membership | ID, AccountID, SeasonID, SeasonLabel, PaymentDate, Amount, PaymentType, Comment |
 | `EventSummaryDTO` | `event.go` | Event Coordination | ID, Name, EventType, Datetime, OwnRSVPState |
 | `EventDetailDTO` | `event.go` | Event Coordination | + full RSVP list, custom fields |
 | `RSVPRowDTO` | `event.go` | Event Coordination | AccountID, MusicianName, State, InstrumentName |
@@ -287,6 +290,8 @@ templates/
       edit.plush.html
     retention/
       index.plush.html
+    cotisations/
+      edit.plush.html
 ```
 
 ---

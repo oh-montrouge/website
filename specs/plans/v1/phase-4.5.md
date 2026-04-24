@@ -1,6 +1,6 @@
 # Phase 4.5 — Fee Payments
 
-**Status:** Not started
+**Status:** Complete
 
 **Goal:** admins can record, edit, and delete fee payments per musician per season;
 first inscription date is derived automatically.

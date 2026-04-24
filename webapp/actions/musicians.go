@@ -17,6 +17,8 @@ type MusiciansHandler struct {
 	Membership  services.MusicianProfileManager
 	Compliance  services.ComplianceManager
 	Instruments services.InstrumentRepository
+	FeePayments services.FeePaymentManager
+	Seasons     services.SeasonManager
 	BaseURL     string
 }
 
@@ -114,6 +116,21 @@ func (h MusiciansHandler) Show(c buffalo.Context) error {
 		return err
 	}
 
+	feePayments, err := h.FeePayments.ListByAccount(tx, id)
+	if err != nil {
+		return err
+	}
+
+	firstInscriptionDate, err := h.FeePayments.GetFirstInscriptionDate(tx, id)
+	if err != nil {
+		return err
+	}
+
+	seasons, err := h.Seasons.List(tx)
+	if err != nil {
+		return err
+	}
+
 	c.Set("account", account)
 	c.Set("accountStatus", string(account.Status))
 	c.Set("profile", profile)
@@ -125,6 +142,9 @@ func (h MusiciansHandler) Show(c buffalo.Context) error {
 	c.Set("hasResetToken", resetToken != nil)
 	c.Set("resetTokenURL", safeResetURL(resetToken))
 	c.Set("resetTokenExpiry", safeResetExpiry(resetToken))
+	c.Set("feePayments", feePayments)
+	c.Set("firstInscriptionDate", safeDateStr(firstInscriptionDate))
+	c.Set("seasons", seasons)
 	return c.Render(http.StatusOK, r.HTML("admin/musicians/show.plush.html"))
 }
 
