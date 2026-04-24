@@ -1,257 +1,278 @@
 <div class="page-shell">
-    <nav aria-label="fil d'Ariane" class="breadcrumb">
-        <a href="/admin/">Administration</a>
-        <span class="breadcrumb__sep">›</span>
-        <a href="/admin/musiciens">Musiciens</a>
-        <span class="breadcrumb__sep">›</span>
-        <span><%= profile.LastName %> <%= profile.FirstName %></span>
-    </nav>
-
-    <div style="display:flex;align-items:baseline;gap:var(--sp-3);margin-bottom:var(--sp-6)">
-        <h1 style="margin:0"><%= profile.LastName %> <%= profile.FirstName %></h1>
-        <%= if (accountStatus == "active") { %>
-            <span class="badge badge--ok">Actif</span>
-        <% } else if (accountStatus == "pending") { %>
-            <span class="badge badge--warn">En attente</span>
-        <% } else { %>
-            <span class="badge badge--neutral">Anonymisé</span>
-        <% } %>
-        <%= if (isAdmin) { %>
-            <span class="badge badge--info">Administrateur</span>
-        <% } %>
+    <div class="page-shell__header">
+        <div>
+            <nav aria-label="fil d'Ariane" class="breadcrumb">
+                <a href="/admin/">Administration</a>
+                <span class="breadcrumb__sep">›</span>
+                <a href="/admin/musiciens">Musiciens</a>
+                <span class="breadcrumb__sep">›</span>
+                <span><%= profile.LastName %> <%= profile.FirstName %></span>
+            </nav>
+            <div style="display:flex;align-items:baseline;gap:var(--sp-3)">
+                <h1><%= profile.LastName %> <%= profile.FirstName %></h1>
+                <%= if (accountStatus == "active") { %>
+                    <span class="badge badge--ok">Actif</span>
+                <% } else if (accountStatus == "pending") { %>
+                    <span class="badge badge--warn">En attente</span>
+                <% } else { %>
+                    <span class="badge badge--neutral">Anonymisé</span>
+                <% } %>
+                <%= if (isAdmin) { %>
+                    <span class="badge badge--info">Administrateur</span>
+                <% } %>
+            </div>
+        </div>
     </div>
 
     <!-- Profile section -->
     <section class="card" style="margin-bottom:var(--sp-5)">
-        <h2 class="card__title">Profil</h2>
-        <dl class="definition-list">
-            <dt>Instrument</dt>
-            <dd><%= profile.MainInstrumentName %></dd>
-
-            <dt>E-mail</dt>
-            <dd>
-                <%= if (account.Email != "") { %>
-                    <%= account.Email %>
-                <% } else { %>
-                    <span class="muted">—</span>
-                <% } %>
-            </dd>
-
-            <%= if (birthDateStr != "") { %>
-            <dt>Date de naissance</dt>
-            <dd><%= birthDateStr %></dd>
-            <% } %>
-
-            <%= if (profile.ParentalConsentURI != "") { %>
-            <dt>Accord parental</dt>
-            <dd><a href="<%= profile.ParentalConsentURI %>" target="_blank" rel="noopener noreferrer">Document ↗</a></dd>
-            <% } %>
-
-            <%= if (profile.PhoneAddressConsent) { %>
-            <dt>Téléphone</dt>
-            <dd>
-                <%= if (profile.Phone != "") { %>
-                    <%= profile.Phone %>
-                <% } else { %>
-                    <span class="muted">—</span>
-                <% } %>
-            </dd>
-            <dt>Adresse</dt>
-            <dd>
-                <%= if (profile.Address != "") { %>
-                    <%= profile.Address %>
-                <% } else { %>
-                    <span class="muted">—</span>
-                <% } %>
-            </dd>
-            <% } %>
-
-            <dt>Restriction de traitement</dt>
-            <dd>
-                <%= if (profile.ProcessingRestricted) { %>
-                    <span class="badge badge--danger">Restreint</span>
-                <% } else { %>
-                    <span class="muted">Non</span>
-                <% } %>
-            </dd>
-        </dl>
-
-        <%= if (accountStatus != "anonymized") { %>
-        <div style="margin-top:var(--sp-4);display:flex;gap:var(--sp-3)">
-            <a href="/admin/musiciens/<%= account.ID %>/modifier" class="btn btn--ghost btn--sm">Modifier le profil</a>
+        <div class="card__header">
+            <h2>Profil</h2>
         </div>
-        <% } %>
+        <div class="card__body">
+            <dl class="kv">
+                <dt>Instrument</dt>
+                <dd><%= profile.MainInstrumentName %></dd>
+
+                <dt>E-mail</dt>
+                <dd>
+                    <%= if (account.Email != "") { %>
+                        <%= account.Email %>
+                    <% } else { %>
+                        <span class="muted">—</span>
+                    <% } %>
+                </dd>
+
+                <%= if (birthDateStr != "") { %>
+                <dt>Date de naissance</dt>
+                <dd><%= birthDateStr %></dd>
+                <% } %>
+
+                <%= if (profile.ParentalConsentURI != "") { %>
+                <dt>Accord parental</dt>
+                <dd><a href="<%= profile.ParentalConsentURI %>" target="_blank" rel="noopener noreferrer">Document ↗</a></dd>
+                <% } %>
+
+                <%= if (profile.PhoneAddressConsent) { %>
+                <dt>Téléphone</dt>
+                <dd>
+                    <%= if (profile.Phone != "") { %>
+                        <%= profile.Phone %>
+                    <% } else { %>
+                        <span class="muted">—</span>
+                    <% } %>
+                </dd>
+                <dt>Adresse</dt>
+                <dd>
+                    <%= if (profile.Address != "") { %>
+                        <%= profile.Address %>
+                    <% } else { %>
+                        <span class="muted">—</span>
+                    <% } %>
+                </dd>
+                <% } %>
+
+                <dt>Restriction de traitement</dt>
+                <dd>
+                    <%= if (profile.ProcessingRestricted) { %>
+                        <span class="badge badge--danger">Restreint</span>
+                    <% } else { %>
+                        <span class="muted">Non</span>
+                    <% } %>
+                </dd>
+            </dl>
+
+            <%= if (accountStatus != "anonymized") { %>
+            <div style="margin-top:var(--sp-4);display:flex;gap:var(--sp-3)">
+                <a href="/admin/musiciens/<%= account.ID %>/modifier" class="btn btn--ghost btn--sm">Modifier le profil</a>
+            </div>
+            <% } %>
+        </div>
     </section>
 
     <!-- Invite / Reset token section -->
     <%= if (accountStatus != "anonymized") { %>
     <section class="card" style="margin-bottom:var(--sp-5)" x-data="{ showInvite: false, showReset: false }">
-        <h2 class="card__title">Liens d'accès</h2>
-
-        <!-- Invite token -->
-        <div style="margin-bottom:var(--sp-4)">
-            <h3 style="font-size:1rem;margin-bottom:var(--sp-2)">Lien d'invitation</h3>
-            <%= if (hasInviteToken) { %>
-            <p class="muted" style="margin-bottom:var(--sp-2)">
-                Expire le <strong><%= inviteTokenExpiry %></strong>
-            </p>
-            <button type="button" class="btn btn--ghost btn--sm" @click="showInvite = !showInvite" :aria-expanded="showInvite">
-                Afficher le lien
-            </button>
-            <div x-show="showInvite" style="display:none;margin-top:var(--sp-2)">
-                <input type="text" class="field__input" readonly value="<%= inviteTokenURL %>"
-                       style="font-size:.85rem" onclick="this.select()" onfocus="this.select()" aria-label="URL d'invitation" />
-            </div>
-            <% } else { %>
-            <p class="muted">Aucun lien actif.</p>
-            <% } %>
-            <form action="/admin/musiciens/<%= account.ID %>/invitation" method="post" style="display:inline;margin-top:var(--sp-2)">
-                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-                <button type="submit" class="btn btn--ghost btn--sm">
-                    <%= if (hasInviteToken) { %>Regénérer<% } else { %>Générer<% } %>
-                </button>
-            </form>
+        <div class="card__header">
+            <h2>Liens d'accès</h2>
         </div>
-
-        <!-- Reset token (active accounts only) -->
-        <%= if (accountStatus == "active") { %>
-        <div>
-            <h3 style="font-size:1rem;margin-bottom:var(--sp-2)">Lien de réinitialisation du mot de passe</h3>
-            <%= if (hasResetToken) { %>
-            <p class="muted" style="margin-bottom:var(--sp-2)">
-                Expire le <strong><%= resetTokenExpiry %></strong>
-            </p>
-            <button type="button" class="btn btn--ghost btn--sm" @click="showReset = !showReset" :aria-expanded="showReset">
-                Afficher le lien
-            </button>
-            <div x-show="showReset" style="display:none;margin-top:var(--sp-2)">
-                <input type="text" class="field__input" readonly value="<%= resetTokenURL %>"
-                       style="font-size:.85rem" onclick="this.select()" onfocus="this.select()" aria-label="URL de réinitialisation" />
-            </div>
-            <% } else { %>
-            <p class="muted">Aucun lien actif.</p>
-            <% } %>
-            <form action="/admin/musiciens/<%= account.ID %>/reinitialisation" method="post" style="display:inline;margin-top:var(--sp-2)">
-                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-                <button type="submit" class="btn btn--ghost btn--sm">
-                    <%= if (hasResetToken) { %>Regénérer<% } else { %>Générer<% } %>
+        <div class="card__body">
+            <!-- Invite token -->
+            <div style="margin-bottom:var(--sp-4)">
+                <h3 style="font-size:var(--fs-15);margin-bottom:var(--sp-2)">Lien d'invitation</h3>
+                <%= if (hasInviteToken) { %>
+                <p class="muted" style="margin-bottom:var(--sp-2)">
+                    Expire le <strong><%= inviteTokenExpiry %></strong>
+                </p>
+                <button type="button" class="btn btn--ghost btn--sm" @click="showInvite = !showInvite" :aria-expanded="showInvite">
+                    Afficher le lien
                 </button>
-            </form>
+                <div x-show="showInvite" style="display:none;margin-top:var(--sp-2)">
+                    <input type="text" class="input" readonly value="<%= inviteTokenURL %>"
+                           style="font-size:var(--fs-13)" onclick="this.select()" onfocus="this.select()" aria-label="URL d'invitation" />
+                </div>
+                <% } else { %>
+                <p class="muted">Aucun lien actif.</p>
+                <% } %>
+                <form action="/admin/musiciens/<%= account.ID %>/invitation" method="post" style="display:inline;margin-top:var(--sp-2)">
+                    <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+                    <button type="submit" class="btn btn--ghost btn--sm">
+                        <%= if (hasInviteToken) { %>Regénérer<% } else { %>Générer<% } %>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Reset token (active accounts only) -->
+            <%= if (accountStatus == "active") { %>
+            <div>
+                <h3 style="font-size:var(--fs-15);margin-bottom:var(--sp-2)">Lien de réinitialisation du mot de passe</h3>
+                <%= if (hasResetToken) { %>
+                <p class="muted" style="margin-bottom:var(--sp-2)">
+                    Expire le <strong><%= resetTokenExpiry %></strong>
+                </p>
+                <button type="button" class="btn btn--ghost btn--sm" @click="showReset = !showReset" :aria-expanded="showReset">
+                    Afficher le lien
+                </button>
+                <div x-show="showReset" style="display:none;margin-top:var(--sp-2)">
+                    <input type="text" class="input" readonly value="<%= resetTokenURL %>"
+                           style="font-size:var(--fs-13)" onclick="this.select()" onfocus="this.select()" aria-label="URL de réinitialisation" />
+                </div>
+                <% } else { %>
+                <p class="muted">Aucun lien actif.</p>
+                <% } %>
+                <form action="/admin/musiciens/<%= account.ID %>/reinitialisation" method="post" style="display:inline;margin-top:var(--sp-2)">
+                    <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+                    <button type="submit" class="btn btn--ghost btn--sm">
+                        <%= if (hasResetToken) { %>Regénérer<% } else { %>Générer<% } %>
+                    </button>
+                </form>
+            </div>
+            <% } %>
         </div>
-        <% } %>
     </section>
     <% } %>
 
     <!-- Admin role section -->
     <%= if (accountStatus == "active") { %>
     <section class="card" style="margin-bottom:var(--sp-5)">
-        <h2 class="card__title">Rôle administrateur</h2>
-        <%= if (isAdmin) { %>
-        <p>Ce musicien est administrateur.</p>
-        <form action="/admin/musiciens/<%= account.ID %>/role-admin" method="post">
-            <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-            <input type="hidden" name="_method" value="DELETE" />
-            <button type="submit" class="btn btn--danger btn--sm">Révoquer le rôle admin</button>
-        </form>
-        <% } else { %>
-        <p>Ce musicien n'est pas administrateur.</p>
-        <form action="/admin/musiciens/<%= account.ID %>/role-admin" method="post">
-            <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-            <button type="submit" class="btn btn--ghost btn--sm">Accorder le rôle admin</button>
-        </form>
-        <% } %>
+        <div class="card__header">
+            <h2>Rôle administrateur</h2>
+        </div>
+        <div class="card__body">
+            <%= if (isAdmin) { %>
+            <p>Ce musicien est administrateur.</p>
+            <form action="/admin/musiciens/<%= account.ID %>/role-admin" method="post">
+                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+                <input type="hidden" name="_method" value="DELETE" />
+                <button type="submit" class="btn btn--danger btn--sm">Révoquer le rôle admin</button>
+            </form>
+            <% } else { %>
+            <p>Ce musicien n'est pas administrateur.</p>
+            <form action="/admin/musiciens/<%= account.ID %>/role-admin" method="post">
+                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+                <button type="submit" class="btn btn--ghost btn--sm">Accorder le rôle admin</button>
+            </form>
+            <% } %>
+        </div>
     </section>
     <% } %>
 
     <!-- GDPR section -->
     <%= if (accountStatus != "anonymized") { %>
     <section class="card card--danger" style="margin-bottom:var(--sp-5)">
-        <h2 class="card__title">Données personnelles (RGPD)</h2>
-
-        <!-- Consent withdrawal -->
-        <%= if (profile.PhoneAddressConsent) { %>
-        <div style="margin-bottom:var(--sp-4)">
-            <h3 style="font-size:1rem">Retrait de consentement téléphone / adresse</h3>
-            <p class="muted" style="margin-bottom:var(--sp-2)">
-                Efface le téléphone et l'adresse et retire le consentement associé.
-            </p>
-            <form action="/admin/musiciens/<%= account.ID %>/consentement" method="post">
-                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-                <input type="hidden" name="_method" value="DELETE" />
-                <button type="submit" class="btn btn--danger btn--sm">Retirer le consentement</button>
-            </form>
+        <div class="card__header">
+            <h2>Données personnelles (RGPD)</h2>
         </div>
-        <% } %>
-
-        <!-- Processing restriction toggle -->
-        <div style="margin-bottom:var(--sp-4)">
-            <h3 style="font-size:1rem">Restriction de traitement</h3>
-            <p class="muted" style="margin-bottom:var(--sp-2)">
-                <%= if (profile.ProcessingRestricted) { %>
-                    Le traitement est actuellement restreint.
-                <% } else { %>
-                    Le traitement n'est pas restreint.
-                <% } %>
-            </p>
-            <form action="/admin/musiciens/<%= account.ID %>/restriction" method="post">
-                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-                <button type="submit" class="btn btn--ghost btn--sm">
-                    <%= if (profile.ProcessingRestricted) { %>Lever la restriction<% } else { %>Activer la restriction<% } %>
-                </button>
-            </form>
-        </div>
-
-        <!-- Anonymize -->
-        <div x-data="{ typed: '' }">
-            <h3 style="font-size:1rem">Anonymisation (RGPD — droit à l'effacement)</h3>
-            <p class="muted" style="margin-bottom:var(--sp-2)">
-                Action irréversible. Efface l'identité, les données de profil, les rôles, les tokens et les sessions.
-            </p>
-            <button type="button" class="btn btn--danger btn--sm"
-                    @click="typed = ''; $refs.anonymizeDialog.showModal()">
-                Anonymiser ce compte
-            </button>
-
-            <dialog x-ref="anonymizeDialog"
-                    @close="typed = ''"
-                    aria-labelledby="anonymize-dialog-title"
-                    style="padding:var(--sp-4);border:2px solid var(--color-danger);border-radius:var(--radius-md);max-width:400px;width:90%">
-                <h4 id="anonymize-dialog-title" style="margin-top:0;font-size:1rem">Confirmer l'anonymisation</h4>
-                <p>Pour confirmer, saisissez <code>ANONYMISER</code> dans le champ ci-dessous :</p>
-                <div class="field" style="margin-bottom:var(--sp-3)">
-                    <label class="field__label" for="anonymize-confirm">Confirmation</label>
-                    <input type="text" class="field__input" id="anonymize-confirm"
-                           x-model="typed" placeholder="ANONYMISER" />
-                </div>
-                <form action="/admin/musiciens/<%= account.ID %>/anonymiser" method="post">
+        <div class="card__body">
+            <!-- Consent withdrawal -->
+            <%= if (profile.PhoneAddressConsent) { %>
+            <div style="margin-bottom:var(--sp-4)">
+                <h3 style="font-size:var(--fs-15)">Retrait de consentement téléphone / adresse</h3>
+                <p class="muted" style="margin-bottom:var(--sp-2)">
+                    Efface le téléphone et l'adresse et retire le consentement associé.
+                </p>
+                <form action="/admin/musiciens/<%= account.ID %>/consentement" method="post">
                     <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-                    <input type="hidden" name="confirmed" :value="typed" />
-                    <div style="display:flex;gap:var(--sp-3)">
-                        <button type="submit" class="btn btn--danger btn--sm" :disabled="typed !== 'ANONYMISER'">
-                            Confirmer l'anonymisation
-                        </button>
-                        <button type="button" class="btn btn--ghost btn--sm"
-                                @click="$refs.anonymizeDialog.close()">
-                            Annuler
-                        </button>
-                    </div>
+                    <input type="hidden" name="_method" value="DELETE" />
+                    <button type="submit" class="btn btn--danger btn--sm">Retirer le consentement</button>
                 </form>
-            </dialog>
+            </div>
+            <% } %>
+
+            <!-- Processing restriction toggle -->
+            <div style="margin-bottom:var(--sp-4)">
+                <h3 style="font-size:var(--fs-15)">Restriction de traitement</h3>
+                <p class="muted" style="margin-bottom:var(--sp-2)">
+                    <%= if (profile.ProcessingRestricted) { %>
+                        Le traitement est actuellement restreint.
+                    <% } else { %>
+                        Le traitement n'est pas restreint.
+                    <% } %>
+                </p>
+                <form action="/admin/musiciens/<%= account.ID %>/restriction" method="post">
+                    <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+                    <button type="submit" class="btn btn--ghost btn--sm">
+                        <%= if (profile.ProcessingRestricted) { %>Lever la restriction<% } else { %>Activer la restriction<% } %>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Anonymize -->
+            <div x-data="{ typed: '' }">
+                <h3 style="font-size:var(--fs-15)">Anonymisation (RGPD — droit à l'effacement)</h3>
+                <p class="muted" style="margin-bottom:var(--sp-2)">
+                    Action irréversible. Efface l'identité, les données de profil, les rôles, les tokens et les sessions.
+                </p>
+                <button type="button" class="btn btn--danger btn--sm"
+                        @click="typed = ''; $refs.anonymizeDialog.showModal()">
+                    Anonymiser ce compte
+                </button>
+
+                <dialog x-ref="anonymizeDialog"
+                        @close="typed = ''"
+                        aria-labelledby="anonymize-dialog-title"
+                        style="padding:var(--sp-4);border:2px solid var(--danger);border-radius:var(--r-3);max-width:400px;width:90%">
+                    <h4 id="anonymize-dialog-title">Confirmer l'anonymisation</h4>
+                    <p>Pour confirmer, saisissez <code>ANONYMISER</code> dans le champ ci-dessous :</p>
+                    <div class="field" style="margin-bottom:var(--sp-3)">
+                        <label class="field__label" for="anonymize-confirm">Confirmation</label>
+                        <input type="text" class="input" id="anonymize-confirm"
+                               x-model="typed" placeholder="ANONYMISER" />
+                    </div>
+                    <form action="/admin/musiciens/<%= account.ID %>/anonymiser" method="post">
+                        <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+                        <input type="hidden" name="confirmed" :value="typed" />
+                        <div style="display:flex;gap:var(--sp-3)">
+                            <button type="submit" class="btn btn--danger btn--sm" :disabled="typed !== 'ANONYMISER'">
+                                Confirmer l'anonymisation
+                            </button>
+                            <button type="button" class="btn btn--ghost btn--sm"
+                                    @click="$refs.anonymizeDialog.close()">
+                                Annuler
+                            </button>
+                        </div>
+                    </form>
+                </dialog>
+            </div>
         </div>
     </section>
 
     <!-- Delete pending -->
     <%= if (accountStatus == "pending") { %>
     <section class="card card--danger">
-        <h2 class="card__title">Supprimer ce compte</h2>
-        <p class="muted" style="margin-bottom:var(--sp-3)">
-            Supprime définitivement ce compte en attente. Cette action est irréversible.
-        </p>
-        <form action="/admin/musiciens/<%= account.ID %>" method="post">
-            <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-            <input type="hidden" name="_method" value="DELETE" />
-            <button type="submit" class="btn btn--danger btn--sm">Supprimer le compte</button>
-        </form>
+        <div class="card__header">
+            <h2>Supprimer ce compte</h2>
+        </div>
+        <div class="card__body">
+            <p class="muted" style="margin-bottom:var(--sp-3)">
+                Supprime définitivement ce compte en attente. Cette action est irréversible.
+            </p>
+            <form action="/admin/musiciens/<%= account.ID %>" method="post">
+                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+                <input type="hidden" name="_method" value="DELETE" />
+                <button type="submit" class="btn btn--danger btn--sm">Supprimer le compte</button>
+            </form>
+        </div>
     </section>
     <% } %>
     <% } %>

@@ -1,12 +1,16 @@
 <div class="page-shell">
-    <nav aria-label="fil d'Ariane" class="breadcrumb">
-        <a href="/admin/">Administration</a>
-        <span class="breadcrumb__sep">›</span>
-        <a href="/admin/musiciens">Musiciens</a>
-        <span class="breadcrumb__sep">›</span>
-        <span>Nouveau musicien</span>
-    </nav>
-    <h1>Nouveau musicien</h1>
+    <div class="page-shell__header">
+        <div>
+            <nav aria-label="fil d'Ariane" class="breadcrumb">
+                <a href="/admin/">Administration</a>
+                <span class="breadcrumb__sep">›</span>
+                <a href="/admin/musiciens">Musiciens</a>
+                <span class="breadcrumb__sep">›</span>
+                <span>Nouveau musicien</span>
+            </nav>
+            <h1>Nouveau musicien</h1>
+        </div>
+    </div>
 
     <%= if (formError != "") { %>
     <div class="alert alert--danger" role="alert" style="margin-bottom:var(--sp-4)">
@@ -14,27 +18,27 @@
     </div>
     <% } %>
 
-    <form action="/admin/musiciens" method="post" class="stack" style="--gap:20px;max-width:480px">
+    <form action="/admin/musiciens" method="post" class="stack" style="--gap:var(--sp-5);max-width:480px">
         <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
 
         <div class="field">
             <label class="field__label" for="first_name">Prénom <span class="req" aria-hidden="true">*</span></label>
-            <input class="field__input" type="text" id="first_name" name="first_name" required autocomplete="given-name" />
+            <input class="input" type="text" id="first_name" name="first_name" required autocomplete="given-name" />
         </div>
 
         <div class="field">
             <label class="field__label" for="last_name">Nom <span class="req" aria-hidden="true">*</span></label>
-            <input class="field__input" type="text" id="last_name" name="last_name" required autocomplete="family-name" />
+            <input class="input" type="text" id="last_name" name="last_name" required autocomplete="family-name" />
         </div>
 
         <div class="field">
             <label class="field__label" for="email">Adresse e-mail <span class="req" aria-hidden="true">*</span></label>
-            <input class="field__input" type="email" id="email" name="email" required autocomplete="email" />
+            <input class="input" type="email" id="email" name="email" required autocomplete="email" />
         </div>
 
         <div class="field">
             <label class="field__label" for="main_instrument_id">Instrument <span class="req" aria-hidden="true">*</span></label>
-            <select class="field__input" id="main_instrument_id" name="main_instrument_id" required>
+            <select class="input" id="main_instrument_id" name="main_instrument_id" required>
                 <option value="">— Choisir —</option>
                 <%= for (i) in instruments { %>
                 <option value="<%= i.ID %>"><%= i.Name %></option>
@@ -44,12 +48,12 @@
 
         <div class="field">
             <label class="field__label" for="birth_date">Date de naissance</label>
-            <input class="field__input" type="date" id="birth_date" name="birth_date" />
+            <input class="input" type="date" id="birth_date" name="birth_date" />
         </div>
 
         <div class="field">
             <label class="field__label" for="parental_consent_uri">Accord parental (URL du document)</label>
-            <input class="field__input" type="url" id="parental_consent_uri" name="parental_consent_uri" placeholder="https://…" />
+            <input class="input" type="url" id="parental_consent_uri" name="parental_consent_uri" placeholder="https://…" />
             <p class="field__hint">Obligatoire pour les musiciens de moins de 15 ans.</p>
         </div>
 
