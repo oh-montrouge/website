@@ -105,3 +105,14 @@ type SeasonRepository interface {
 	List(tx *pop.Connection) (models.Seasons, error)
 	DesignateCurrent(tx *pop.Connection, id int64) error
 }
+
+// FeePaymentRepository is the interface FeePaymentService depends on to access fee payment data.
+// The real implementation is models.FeePaymentStore; tests inject stubs.
+type FeePaymentRepository interface {
+	Create(tx *pop.Connection, accountID, seasonID int64, amount float64, paymentDate time.Time, paymentType, comment string) (int64, error)
+	Update(tx *pop.Connection, id int64, amount float64, paymentDate time.Time, paymentType, comment string) error
+	Delete(tx *pop.Connection, id int64) error
+	ListByAccount(tx *pop.Connection, accountID int64) (models.FeePaymentRows, error)
+	GetByID(tx *pop.Connection, id int64) (*models.FeePaymentRow, error)
+	GetFirstInscriptionDate(tx *pop.Connection, accountID int64) (*time.Time, error)
+}

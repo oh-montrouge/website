@@ -109,6 +109,41 @@ Use `<dl class="kv">` for profile data, detail views, and any label/value layout
 
 `data-label` on every `<td>` is required — the mobile CSS uses it for stacked labels. Action cells with no visible label: `data-label=""`.
 
+### Confirmation modal
+
+Use for any destructive action that needs user confirmation before submitting a form.
+The modal is powered by `Alpine.store('confirmModal')`, declared in `_confirm_modal.plush.html`.
+
+**Requirements per page:**
+1. Include `<%= partial("confirm_modal.html") %>` once (just before the closing tag of the page root element)
+2. The page root element (or any ancestor of the trigger buttons) must have `x-data` so Alpine processes the `@click` directives
+
+**Trigger button:**
+```html
+<button type="button" class="btn btn--danger btn--sm"
+        @click="$store.confirmModal.open({
+            title: 'Supprimer l\'élément',
+            body: 'Cette action est irréversible.',
+            confirmLabel: 'Supprimer',
+            action: '/admin/ressource/123',
+            httpMethod: 'DELETE'
+        })">Supprimer</button>
+```
+
+**`open(opts)` options:**
+
+| Field | Default | Description |
+|---|---|---|
+| `title` | `''` | Dialog heading |
+| `body` | `''` | Explanatory text |
+| `confirmLabel` | `'Confirmer'` | Submit button label |
+| `cancelLabel` | `'Annuler'` | Cancel button label |
+| `confirmWord` | `''` | If set, user must type this exact word before confirm enables (for irreversible actions) |
+| `action` | `''` | Form `action` URL |
+| `httpMethod` | `''` | `_method` override value (e.g. `'DELETE'`) |
+
+---
+
 ### Buttons
 
 ```html

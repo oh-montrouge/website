@@ -69,6 +69,10 @@ func App() *buffalo.App {
 			Seasons: models.SeasonStore{},
 		}
 
+		feePaymentSvc := services.FeePaymentService{
+			FeePayments: models.FeePaymentStore{},
+		}
+
 		// Inject sheet_music_url into every request context (empty string when unset).
 		sheetMusicURL := envy.Get("SHEET_MUSIC_URL", "")
 		app.Use(func(next buffalo.Handler) buffalo.Handler {
@@ -122,6 +126,8 @@ func App() *buffalo.App {
 			Membership:  membershipSvc,
 			Compliance:  complianceSvc,
 			Instruments: models.InstrumentStore{},
+			FeePayments: feePaymentSvc,
+			Seasons:     seasonSvc,
 			BaseURL:     baseURL,
 		}
 		profileH := ProfileHandler{Membership: membershipSvc}
@@ -142,6 +148,13 @@ func App() *buffalo.App {
 		admin.DELETE("/musiciens/{id}/role-admin", musicians.RevokeAdmin)
 		admin.DELETE("/musiciens/{id}/consentement", musicians.WithdrawConsent)
 		admin.POST("/musiciens/{id}/restriction", musicians.ToggleProcessingRestriction)
+
+		// Fee payment routes
+		feePayments := FeePaymentsHandler{FeePayments: feePaymentSvc}
+		admin.POST("/musiciens/{account_id}/cotisations", feePayments.Create)
+		admin.GET("/cotisations/{id}/modifier", feePayments.EditForm)
+		admin.PUT("/cotisations/{id}", feePayments.Update)
+		admin.DELETE("/cotisations/{id}", feePayments.Delete)
 
 		// Retention review
 		admin.GET("/retention", retentionH.Index)

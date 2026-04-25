@@ -112,6 +112,9 @@ li + li { margin-top: var(--sp-2); }
 .btn--sm { height: 30px; padding: 0 10px; font-size: var(--fs-13); }
 .btn--lg { height: 46px; padding: 0 22px; font-size: var(--fs-15); }
 .btn[disabled] { opacity: .5; cursor: not-allowed; }
+/* <summary> used as a disclosure toggle styled as a button — hide the native marker */
+summary.btn { list-style: none; }
+summary.btn::-webkit-details-marker { display: none; }
 
 /* Form fields */
 .field { display: flex; flex-direction: column; gap: 6px; }
@@ -366,4 +369,5 @@ li + li { margin-top: var(--sp-2); }
   .table td { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border: none; gap: 12px; font-size: 13px; }
   .table td::before { content: attr(data-label); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-4); font-weight: 500; flex-shrink: 0; }
   .table td[data-label=""]::before, .table td:not([data-label])::before { display: none; }
+  .hide-sm { display: none !important; }
 }

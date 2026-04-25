@@ -1,0 +1,66 @@
+<div class="page-shell">
+    <div class="page-shell__header">
+        <div>
+            <nav class="breadcrumb" aria-label="fil d'Ariane">
+                <a href="/admin/">Administration</a>
+                <span class="breadcrumb__sep">›</span>
+                <a href="/admin/musiciens">Musiciens</a>
+                <span class="breadcrumb__sep">›</span>
+                <a href="/admin/musiciens/<%= payment.AccountID %>">Musicien</a>
+                <span class="breadcrumb__sep">›</span>
+                <span>Modifier la cotisation</span>
+            </nav>
+            <h1>Modifier la cotisation</h1>
+        </div>
+    </div>
+
+    <section class="card" style="max-width:640px">
+        <div class="card__header">
+            <h2>Cotisation — <%= payment.SeasonLabel %></h2>
+        </div>
+        <div class="card__body">
+            <p class="muted" style="margin-bottom:var(--sp-4)">La saison et le compte ne peuvent pas être modifiés.</p>
+
+            <form action="/admin/cotisations/<%= payment.ID %>" method="post">
+                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+                <input type="hidden" name="_method" value="PUT" />
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-3)">
+                    <div class="field">
+                        <label class="field__label" for="amount">Montant (€) <span class="req" aria-hidden="true">*</span></label>
+                        <input class="input" type="number" step="0.01" min="0" id="amount" name="amount"
+                               value="<%= fmtAmount(payment.Amount) %>" required aria-required="true" />
+                    </div>
+                    <div class="field">
+                        <label class="field__label" for="payment_date">Date de paiement <span class="req" aria-hidden="true">*</span></label>
+                        <input class="input" type="date" id="payment_date" name="payment_date"
+                               value="<%= payment.PaymentDate.Format("2006-01-02") %>" required aria-required="true" />
+                    </div>
+                </div>
+
+                <div class="field" style="margin-bottom:var(--sp-3)">
+                    <label class="field__label" for="payment_type">Type <span class="req" aria-hidden="true">*</span></label>
+                    <select class="input" id="payment_type" name="payment_type" required aria-required="true">
+                        <option value="chèque" <%= if (payment.PaymentType == "chèque") { %>selected<% } %>>Chèque</option>
+                        <option value="espèces" <%= if (payment.PaymentType == "espèces") { %>selected<% } %>>Espèces</option>
+                        <option value="virement bancaire" <%= if (payment.PaymentType == "virement bancaire") { %>selected<% } %>>Virement bancaire</option>
+                    </select>
+                </div>
+
+                <div class="field" style="margin-bottom:var(--sp-4)">
+                    <label class="field__label" for="comment">Commentaire</label>
+                    <input class="input" type="text" id="comment" name="comment" value="<%= payment.Comment %>" />
+                </div>
+
+                <%= if (formError != "") { %>
+                <p class="field__error" role="alert" style="margin-bottom:var(--sp-3)"><%= formError %></p>
+                <% } %>
+
+                <div style="display:flex;gap:var(--sp-3)">
+                    <button type="submit" class="btn btn--primary btn--sm">Enregistrer</button>
+                    <a href="/admin/musiciens/<%= payment.AccountID %>" class="btn btn--ghost btn--sm">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
