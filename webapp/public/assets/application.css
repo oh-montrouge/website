@@ -369,4 +369,5 @@ summary.btn::-webkit-details-marker { display: none; }
   .table td { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border: none; gap: 12px; font-size: 13px; }
   .table td::before { content: attr(data-label); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-4); font-weight: 500; flex-shrink: 0; }
   .table td[data-label=""]::before, .table td:not([data-label])::before { display: none; }
+  .hide-sm { display: none !important; }
 }

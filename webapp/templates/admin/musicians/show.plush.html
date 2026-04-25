@@ -94,6 +94,12 @@
     <section class="card" style="margin-bottom:var(--sp-5)">
         <div class="card__header">
             <h2>Cotisations</h2>
+            <%= if (accountStatus != "anonymized") { %>
+            <button type="button" class="btn btn--ghost btn--sm"
+                    @click="document.getElementById('fee-payment-modal').showModal()">
+                + Enregistrer
+            </button>
+            <% } %>
         </div>
         <div class="card__body">
             <%= if (firstInscriptionDate != "") { %>
@@ -104,13 +110,13 @@
             <% } %>
 
             <%= if (len(feePayments) > 0) { %>
-            <table class="table" aria-label="Cotisations" style="margin-bottom:var(--sp-4)">
+            <table class="table" aria-label="Cotisations">
                 <thead>
                     <tr>
                         <th scope="col">Saison</th>
                         <th scope="col">Montant</th>
                         <th scope="col">Date</th>
-                        <th scope="col">Type</th>
+                        <th scope="col" class="hide-sm">Type</th>
                         <th scope="col"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
@@ -120,8 +126,8 @@
                         <td data-label="Saison"><%= p.SeasonLabel %></td>
                         <td data-label="Montant"><%= fmtAmount(p.Amount) %> €</td>
                         <td data-label="Date"><%= p.PaymentDate.Format("02/01/2006") %></td>
-                        <td data-label="Type"><%= p.PaymentType %></td>
-                        <td data-label="Actions">
+                        <td data-label="Type" class="hide-sm"><%= p.PaymentType %></td>
+                        <td data-label="">
                             <a href="/admin/cotisations/<%= p.ID %>/modifier" class="btn btn--ghost btn--sm">Modifier</a>
                             <button type="button" class="btn btn--danger btn--sm"
                                     @click="$store.confirmModal.open({
@@ -137,54 +143,62 @@
                 </tbody>
             </table>
             <% } else { %>
-            <p class="muted" style="margin-bottom:var(--sp-4)">Aucune cotisation enregistrée.</p>
-            <% } %>
-
-            <%= if (accountStatus != "anonymized") { %>
-            <details>
-                <summary class="btn btn--ghost btn--sm">+ Enregistrer une cotisation</summary>
-                <form action="/admin/musiciens/<%= account.ID %>/cotisations" method="post" style="margin-top:var(--sp-4)">
-                    <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-3)">
-                        <div class="field">
-                            <label class="field__label" for="cotisation-season-id">Saison <span class="req" aria-hidden="true">*</span></label>
-                            <select class="input" id="cotisation-season-id" name="season_id" required aria-required="true">
-                                <option value="">— Choisir —</option>
-                                <%= for (s) in seasons { %>
-                                <option value="<%= s.ID %>"><%= s.Label %></option>
-                                <% } %>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label class="field__label" for="cotisation-payment-type">Type <span class="req" aria-hidden="true">*</span></label>
-                            <select class="input" id="cotisation-payment-type" name="payment_type" required aria-required="true">
-                                <option value="">— Choisir —</option>
-                                <option value="chèque">Chèque</option>
-                                <option value="espèces">Espèces</option>
-                                <option value="virement bancaire">Virement bancaire</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label class="field__label" for="cotisation-amount">Montant (€) <span class="req" aria-hidden="true">*</span></label>
-                            <input class="input" type="number" step="0.01" min="0" id="cotisation-amount" name="amount"
-                                   required aria-required="true" />
-                        </div>
-                        <div class="field">
-                            <label class="field__label" for="cotisation-payment-date">Date de paiement <span class="req" aria-hidden="true">*</span></label>
-                            <input class="input" type="date" id="cotisation-payment-date" name="payment_date"
-                                   required aria-required="true" />
-                        </div>
-                    </div>
-                    <div class="field" style="margin-bottom:var(--sp-3)">
-                        <label class="field__label" for="cotisation-comment">Commentaire</label>
-                        <input class="input" type="text" id="cotisation-comment" name="comment" />
-                    </div>
-                    <button type="submit" class="btn btn--primary btn--sm">Enregistrer</button>
-                </form>
-            </details>
+            <p class="muted">Aucune cotisation enregistrée.</p>
             <% } %>
         </div>
     </section>
+
+    <!-- Fee payment modal -->
+    <%= if (accountStatus != "anonymized") { %>
+    <dialog id="fee-payment-modal"
+            aria-labelledby="fee-payment-modal-title"
+            style="padding:var(--sp-5);border:1px solid var(--line);border-radius:var(--r-3);max-width:480px;width:90%">
+        <h3 id="fee-payment-modal-title" style="font-size:var(--fs-16);margin-bottom:var(--sp-4)">Enregistrer une cotisation</h3>
+        <form action="/admin/musiciens/<%= account.ID %>/cotisations" method="post">
+            <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-3)">
+                <div class="field">
+                    <label class="field__label" for="cotisation-season-id">Saison <span class="req" aria-hidden="true">*</span></label>
+                    <select class="input" id="cotisation-season-id" name="season_id" required aria-required="true">
+                        <option value="">— Choisir —</option>
+                        <%= for (s) in seasons { %>
+                        <option value="<%= s.ID %>"<%= if (s.IsCurrent) { %> selected<% } %>><%= s.Label %></option>
+                        <% } %>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field__label" for="cotisation-payment-type">Type <span class="req" aria-hidden="true">*</span></label>
+                    <select class="input" id="cotisation-payment-type" name="payment_type" required aria-required="true">
+                        <option value="">— Choisir —</option>
+                        <option value="chèque">Chèque</option>
+                        <option value="espèces">Espèces</option>
+                        <option value="virement bancaire" selected>Virement bancaire</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field__label" for="cotisation-amount">Montant (€) <span class="req" aria-hidden="true">*</span></label>
+                    <input class="input" type="number" step="0.01" min="0" id="cotisation-amount" name="amount"
+                           required aria-required="true" value="40" />
+                </div>
+                <div class="field">
+                    <label class="field__label" for="cotisation-payment-date">Date de paiement <span class="req" aria-hidden="true">*</span></label>
+                    <input class="input" type="date" id="cotisation-payment-date" name="payment_date"
+                           required aria-required="true"
+                           :value="new Date().toISOString().split('T')[0]" />
+                </div>
+            </div>
+            <div class="field" style="margin-bottom:var(--sp-4)">
+                <label class="field__label" for="cotisation-comment">Commentaire</label>
+                <input class="input" type="text" id="cotisation-comment" name="comment" />
+            </div>
+            <div style="display:flex;gap:var(--sp-3)">
+                <button type="submit" class="btn btn--primary btn--sm">Enregistrer</button>
+                <button type="button" class="btn btn--ghost btn--sm"
+                        @click="document.getElementById('fee-payment-modal').close()">Annuler</button>
+            </div>
+        </form>
+    </dialog>
+    <% } %>
 
     <!-- Invite / Reset token section -->
     <%= if (accountStatus != "anonymized") { %>
