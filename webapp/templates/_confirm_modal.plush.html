@@ -1,0 +1,56 @@
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.store('confirmModal', {
+        title: '',
+        body: '',
+        confirmLabel: 'Confirmer',
+        cancelLabel: 'Annuler',
+        confirmWord: '',
+        typed: '',
+        action: '',
+        httpMethod: '',
+        open(opts) {
+            this.title        = opts.title        || '';
+            this.body         = opts.body         || '';
+            this.confirmLabel = opts.confirmLabel || 'Confirmer';
+            this.cancelLabel  = opts.cancelLabel  || 'Annuler';
+            this.confirmWord  = opts.confirmWord  || '';
+            this.action       = opts.action       || '';
+            this.httpMethod   = opts.httpMethod   || '';
+            this.typed        = '';
+            document.getElementById('confirm-modal').showModal();
+        }
+    });
+});
+</script>
+
+<dialog id="confirm-modal"
+        x-data
+        @close="$store.confirmModal.typed = ''"
+        aria-labelledby="confirm-modal-title"
+        style="padding:var(--sp-4);border:2px solid var(--danger);border-radius:var(--r-3);max-width:400px;width:90%">
+    <h4 id="confirm-modal-title" x-text="$store.confirmModal.title" style="margin-bottom:var(--sp-2)"></h4>
+    <p x-text="$store.confirmModal.body" style="margin-bottom:var(--sp-3)"></p>
+    <div class="field" style="margin-bottom:var(--sp-3)" x-show="$store.confirmModal.confirmWord !== ''">
+        <label class="field__label" for="confirm-modal-input">
+            Saisissez <code x-text="$store.confirmModal.confirmWord"></code> pour confirmer
+        </label>
+        <input type="text" class="input" id="confirm-modal-input"
+               x-model="$store.confirmModal.typed"
+               :placeholder="$store.confirmModal.confirmWord"
+               autocomplete="off" />
+    </div>
+    <form :action="$store.confirmModal.action" method="post">
+        <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+        <input type="hidden" name="_method" :value="$store.confirmModal.httpMethod" />
+        <input type="hidden" name="confirmed" :value="$store.confirmModal.typed" />
+        <div style="display:flex;gap:var(--sp-3)">
+            <button type="submit" class="btn btn--danger btn--sm"
+                    :disabled="$store.confirmModal.confirmWord !== '' && $store.confirmModal.typed !== $store.confirmModal.confirmWord"
+                    x-text="$store.confirmModal.confirmLabel"></button>
+            <button type="button" class="btn btn--ghost btn--sm"
+                    @click="document.getElementById('confirm-modal').close()"
+                    x-text="$store.confirmModal.cancelLabel"></button>
+        </div>
+    </form>
+</dialog>

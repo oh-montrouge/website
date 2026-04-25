@@ -1,4 +1,4 @@
-<div class="page-shell">
+<div class="page-shell" x-data>
     <div class="page-shell__header">
         <div>
             <nav aria-label="fil d'Ariane" class="breadcrumb">
@@ -123,12 +123,14 @@
                         <td data-label="Type"><%= p.PaymentType %></td>
                         <td data-label="Actions">
                             <a href="/admin/cotisations/<%= p.ID %>/modifier" class="btn btn--ghost btn--sm">Modifier</a>
-                            <form action="/admin/cotisations/<%= p.ID %>" method="post" style="display:inline">
-                                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-                                <input type="hidden" name="_method" value="DELETE" />
-                                <button type="submit" class="btn btn--danger btn--sm"
-                                        onclick="return confirm('Supprimer cette cotisation ?')">Supprimer</button>
-                            </form>
+                            <button type="button" class="btn btn--danger btn--sm"
+                                    @click="$store.confirmModal.open({
+                                        title: 'Supprimer la cotisation',
+                                        body: 'Supprimer cette cotisation ?',
+                                        confirmLabel: 'Supprimer',
+                                        action: '/admin/cotisations/<%= p.ID %>',
+                                        httpMethod: 'DELETE'
+                                    })">Supprimer</button>
                         </td>
                     </tr>
                     <% } %>
@@ -312,41 +314,21 @@
             </div>
 
             <!-- Anonymize -->
-            <div x-data="{ typed: '' }">
+            <div>
                 <h3 style="font-size:var(--fs-15)">Anonymisation (RGPD — droit à l'effacement)</h3>
                 <p class="muted" style="margin-bottom:var(--sp-2)">
                     Action irréversible. Efface l'identité, les données de profil, les rôles, les tokens et les sessions.
                 </p>
                 <button type="button" class="btn btn--danger btn--sm"
-                        @click="typed = ''; $refs.anonymizeDialog.showModal()">
+                        @click="$store.confirmModal.open({
+                            title: 'Confirmer l\'anonymisation',
+                            body: 'Action irréversible. Efface l\'identité, les données de profil, les rôles, les tokens et les sessions.',
+                            confirmLabel: 'Confirmer l\'anonymisation',
+                            confirmWord: 'ANONYMISER',
+                            action: '/admin/musiciens/<%= account.ID %>/anonymiser'
+                        })">
                     Anonymiser ce compte
                 </button>
-
-                <dialog x-ref="anonymizeDialog"
-                        @close="typed = ''"
-                        aria-labelledby="anonymize-dialog-title"
-                        style="padding:var(--sp-4);border:2px solid var(--danger);border-radius:var(--r-3);max-width:400px;width:90%">
-                    <h4 id="anonymize-dialog-title">Confirmer l'anonymisation</h4>
-                    <p>Pour confirmer, saisissez <code>ANONYMISER</code> dans le champ ci-dessous :</p>
-                    <div class="field" style="margin-bottom:var(--sp-3)">
-                        <label class="field__label" for="anonymize-confirm">Confirmation</label>
-                        <input type="text" class="input" id="anonymize-confirm"
-                               x-model="typed" placeholder="ANONYMISER" />
-                    </div>
-                    <form action="/admin/musiciens/<%= account.ID %>/anonymiser" method="post">
-                        <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-                        <input type="hidden" name="confirmed" :value="typed" />
-                        <div style="display:flex;gap:var(--sp-3)">
-                            <button type="submit" class="btn btn--danger btn--sm" :disabled="typed !== 'ANONYMISER'">
-                                Confirmer l'anonymisation
-                            </button>
-                            <button type="button" class="btn btn--ghost btn--sm"
-                                    @click="$refs.anonymizeDialog.close()">
-                                Annuler
-                            </button>
-                        </div>
-                    </form>
-                </dialog>
             </div>
         </div>
     </section>
@@ -361,13 +343,17 @@
             <p class="muted" style="margin-bottom:var(--sp-3)">
                 Supprime définitivement ce compte en attente. Cette action est irréversible.
             </p>
-            <form action="/admin/musiciens/<%= account.ID %>" method="post">
-                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
-                <input type="hidden" name="_method" value="DELETE" />
-                <button type="submit" class="btn btn--danger btn--sm">Supprimer le compte</button>
-            </form>
+            <button type="button" class="btn btn--danger btn--sm"
+                    @click="$store.confirmModal.open({
+                        title: 'Supprimer ce compte',
+                        body: 'Supprime définitivement ce compte en attente. Cette action est irréversible.',
+                        confirmLabel: 'Supprimer le compte',
+                        action: '/admin/musiciens/<%= account.ID %>',
+                        httpMethod: 'DELETE'
+                    })">Supprimer le compte</button>
         </div>
     </section>
     <% } %>
     <% } %>
+    <%= partial("confirm_modal.html") %>
 </div>
