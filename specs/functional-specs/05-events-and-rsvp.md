@@ -120,21 +120,23 @@ All authenticated users can view the full RSVP list for any event.
 
 ---
 
-## Event List View
+## Event List Views
 
-The authenticated event list (`/evenements`) shows:
+### Dashboard (`/tableau-de-bord`)
 
-- **Past events:** events whose date/time is within the last 30 days (i.e.,
-  `datetime >= NOW() - INTERVAL '30 days'`).
-- **Upcoming events:** all events whose date/time is in the future, with no upper bound.
+Shows upcoming events only: events whose date/time is today or in the future
+(`datetime >= CURRENT_DATE`). No past events. Events are ordered chronologically ascending.
 
-Events older than 30 days are not shown. Events are ordered chronologically (ascending by
-date/time), so the oldest visible past event appears first and the furthest upcoming event
-appears last.
+For each event: name, date/time, type, and the viewer's own RSVP state (`unanswered` if no
+response given). For events where the viewer has no RSVP record (events that predated their
+account activation), no RSVP state is shown.
 
-For each event, the list shows: name, date/time, type, and the authenticated user's own RSVP
-state (including `unanswered` if no response has been given). For events where the user has no
-RSVP record (events that predated their account activation), no RSVP state is shown.
+### Full Event List (`/evenements`)
+
+Shows all events with no date filter. Events are ordered chronologically ascending.
+
+Displays the same per-event information as the dashboard. For admin viewers, create/edit/delete
+controls are shown inline (links to the admin forms).
 
 ---
 
