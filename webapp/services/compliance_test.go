@@ -253,6 +253,69 @@ func TestAnonymize_AnonymizeAccountError_StopsChain(t *testing.T) {
 	assert.False(t, roles.removeAllCalled, "RemoveAllRoles must not be called if AnonymizeAccount fails")
 }
 
+// --- AC-M7: Anonymize deletes RSVPs ---
+
+// stubRSVPDeleteRepo is a minimal RSVPRepository stub that tracks DeleteByAccount calls.
+type stubRSVPDeleteRepo struct {
+	deleted bool
+	err     error
+}
+
+func (s *stubRSVPDeleteRepo) SeedForEvent(_ *pop.Connection, _ int64) error   { return s.err }
+func (s *stubRSVPDeleteRepo) SeedForAccount(_ *pop.Connection, _ int64) error { return s.err }
+func (s *stubRSVPDeleteRepo) GetByAccountAndEvent(_ *pop.Connection, _, _ int64) (*models.RSVPRow, error) {
+	return nil, s.err
+}
+func (s *stubRSVPDeleteRepo) Update(_ *pop.Connection, _ int64, _ string, _ *int64) error {
+	return s.err
+}
+func (s *stubRSVPDeleteRepo) DeleteByAccount(_ *pop.Connection, _ int64) error {
+	s.deleted = true
+	return s.err
+}
+func (s *stubRSVPDeleteRepo) ClearFieldResponses(_ *pop.Connection, _ int64) error { return s.err }
+func (s *stubRSVPDeleteRepo) ListForEvent(_ *pop.Connection, _ int64) ([]models.RSVPListRow, error) {
+	return nil, s.err
+}
+func (s *stubRSVPDeleteRepo) ResetYesRSVPs(_ *pop.Connection, _ int64) error    { return s.err }
+func (s *stubRSVPDeleteRepo) ClearInstruments(_ *pop.Connection, _ int64) error { return s.err }
+func (s *stubRSVPDeleteRepo) AddFieldResponse(_ *pop.Connection, _, _ int64, _ string) error {
+	return s.err
+}
+func (s *stubRSVPDeleteRepo) ListFieldResponses(_ *pop.Connection, _ int64) ([]models.RSVPFieldResponseRow, error) {
+	return nil, s.err
+}
+
+func TestAnonymize_DeletesRSVPs(t *testing.T) {
+	rsvps := &stubRSVPDeleteRepo{}
+	svc := services.ComplianceService{
+		Accounts:     &stubAccountRepoFull{},
+		Membership:   &stubMembershipRepo{},
+		Roles:        &stubRoleRepoFull{hasRole: false},
+		InviteTokens: &stubInviteTokenRepo{},
+		ResetTokens:  &stubResetTokenRepo{},
+		Sessions:     &stubSessionRepo{},
+		Events:       rsvps,
+	}
+	err := svc.Anonymize(nil, 5)
+	assert.NoError(t, err)
+	assert.True(t, rsvps.deleted, "DeleteByAccount should be called during anonymization")
+}
+
+func TestAnonymize_NilEvents_DoesNotPanic(t *testing.T) {
+	svc := services.ComplianceService{
+		Accounts:     &stubAccountRepoFull{},
+		Membership:   &stubMembershipRepo{},
+		Roles:        &stubRoleRepoFull{hasRole: false},
+		InviteTokens: &stubInviteTokenRepo{},
+		ResetTokens:  &stubResetTokenRepo{},
+		Sessions:     &stubSessionRepo{},
+		Events:       nil,
+	}
+	err := svc.Anonymize(nil, 5)
+	assert.NoError(t, err)
+}
+
 // --- RetentionReviewList ---
 
 func TestRetentionReviewList_MapsRows(t *testing.T) {

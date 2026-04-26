@@ -63,6 +63,7 @@ func App() *buffalo.App {
 			Roles:        models.AccountRoleStore{},
 			InviteTokens: models.InviteTokenStore{},
 			ResetTokens:  models.PasswordResetTokenStore{},
+			Events:       models.RSVPStore{},
 		}
 
 		seasonSvc := services.SeasonService{
@@ -117,6 +118,7 @@ func App() *buffalo.App {
 			InviteTokens: models.InviteTokenStore{},
 			ResetTokens:  models.PasswordResetTokenStore{},
 			Sessions:     models.HTTPSessionStore{},
+			Events:       models.RSVPStore{},
 		}
 
 		baseURL := envy.Get("APP_BASE_URL", "http://localhost:3000")
@@ -159,10 +161,36 @@ func App() *buffalo.App {
 		// Retention review
 		admin.GET("/retention", retentionH.Index)
 
+		eventSvc := services.EventService{
+			Events: models.EventStore{},
+			RSVPs:  models.RSVPStore{},
+		}
+		eventsH := EventsHandler{
+			Events:      eventSvc,
+			Instruments: models.InstrumentStore{},
+			Membership:  membershipSvc,
+		}
+
+		// Admin event routes
+		admin.GET("/evenements/nouveau", eventsH.New)
+		admin.POST("/evenements", eventsH.Create)
+		admin.GET("/evenements/{id}/modifier", eventsH.Edit)
+		admin.PUT("/evenements/{id}", eventsH.Update)
+		admin.DELETE("/evenements/{id}", eventsH.Delete)
+		admin.POST("/evenements/{id}/champs", eventsH.AddField)
+		admin.GET("/evenements/{id}/champs/{field_id}/modifier", eventsH.EditFieldForm)
+		admin.PUT("/evenements/{id}/champs/{field_id}", eventsH.UpdateField)
+		admin.DELETE("/evenements/{id}/champs/{field_id}", eventsH.DeleteField)
+		admin.PATCH("/evenements/{id}/rsvp/{musician_id}", eventsH.AdminUpdateRSVP)
+
 		// Profile route (authenticated, not admin-only)
 		authenticated := app.Group("")
 		authenticated.Use(RequireActiveAccount(authSvc))
 		authenticated.GET("/profil", profileH.Show)
+		authenticated.GET("/tableau-de-bord", eventsH.Dashboard)
+		authenticated.GET("/evenements", eventsH.Index)
+		authenticated.GET("/evenements/{id}", eventsH.Show)
+		authenticated.POST("/evenements/{id}/rsvp", eventsH.UpdateRSVP)
 
 		admin.GET("/saisons", seasons.Index)
 		admin.POST("/saisons", seasons.Create)

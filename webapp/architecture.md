@@ -147,23 +147,26 @@ See `specs/technical-adrs/007-account-musician-dtos.md`.
 
 ---
 
-### EventService (`services/event.go`) — new in Phase 4.6
+### EventService (`services/event.go`) — Phase 4.6 ✅
 
 **Context:** Event Coordination. Owns both events and RSVPs (no separate RSVPService).
 
+**Status:** Phase 4.6 ✅
+
 | Method | Notes |
 |--------|-------|
-| `ListForMember` | Past 30 days + upcoming, with viewer's own RSVP state |
-| `GetDetail` | Full RSVP list + fields |
-| `AdminList` | All events for admin view |
+| `ListForMember` | Upcoming events (today included), with viewer's own RSVP state |
+| `ListAll` | All events past and future, with viewer's own RSVP state |
+| `GetDetail` | Full RSVP list + pupitre headcounts + custom fields |
 | `Create` | Bulk RSVP seed for all active accounts on save |
-| `Update` | Type-change RSVP effects applied atomically |
+| `Update` | Type-change RSVP effects applied atomically (see spec table) |
 | `Delete` | Cascades to RSVPs via DB FK |
 | `UpdateRSVP` | Validates instrument for concerts; clears field responses on state change |
+| `GetField` | Returns single field DTO for edit form |
 | `AddField` | `other` events only |
 | `UpdateField` | Blocked if responses exist |
 | `DeleteField` | Blocked if responses exist |
-| `SeedRSVPsForAccount` | Called by AccountService.CompleteInvite (Phase 4.6) |
+| `SeedRSVPsForAccount` | Called by AccountService.CompleteInvite |
 
 **Repository deps:** `EventRepository`, `RSVPRepository`
 
@@ -202,8 +205,8 @@ provides the production implementations. Tests inject stubs.
 | `PasswordResetTokenRepository` | 4.2 ✅ | `models.PasswordResetTokenStore` |
 | `SeasonRepository` | 4.4 ✅ | `models.SeasonStore` |
 | `FeePaymentRepository` | 4.5 ✅ | `models.FeePaymentStore` |
-| `EventRepository` | 4.6 | `models.EventStore` |
-| `RSVPRepository` | 4.6 | `models.RSVPStore` |
+| `EventRepository` | 4.6 ✅ | `models.EventStore` |
+| `RSVPRepository` | 4.6 ✅ | `models.RSVPStore` |
 
 ---
 
@@ -223,7 +226,7 @@ registration in `app.go`.
 | `retention.go` | 4.3 ✅ | `RetentionHandler` | `ComplianceManager` |
 | `seasons.go` | 4.4 ✅ | `SeasonsHandler` | `SeasonService` |
 | `fee_payments.go` | 4.5 ✅ | `FeePaymentsHandler` | `FeePaymentService` |
-| `events.go` | 4.6 | `EventsHandler` | `EventService` |
+| `events.go` | 4.6 ✅ | `EventsHandler` | `EventService`, `InstrumentRepository`, `MusicianProfileManager` |
 
 ---
 
@@ -246,7 +249,7 @@ construction. See `specs/technical-adrs/007-account-musician-dtos.md`.
 | `FeePaymentDTO` | `fee_payment.go` | Membership | ID, AccountID, SeasonID, SeasonLabel, PaymentDate, Amount, PaymentType, Comment |
 | `EventSummaryDTO` | `event.go` | Event Coordination | ID, Name, EventType, Datetime, OwnRSVPState |
 | `EventDetailDTO` | `event.go` | Event Coordination | + full RSVP list, custom fields |
-| `RSVPRowDTO` | `event.go` | Event Coordination | AccountID, MusicianName, State, InstrumentName |
+| `RSVPRowDTO` | `event.go` | Event Coordination | AccountID, DisplayName, State, InstrumentID, InstrumentName, MainInstrument, FieldResponses |
 | `EventFieldDTO` | `event.go` | Event Coordination | ID, Label, FieldType, Required, Position, Choices |
 
 ---

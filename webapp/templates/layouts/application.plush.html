@@ -26,6 +26,7 @@
 
                 <%= if (current_account != nil) { %>
                 <nav class="appbar__nav">
+                    <a href="/tableau-de-bord" class="appbar__nav-item">Tableau de bord</a>
                     <a href="/evenements" class="appbar__nav-item">Événements</a>
                     <%= if (sheet_music_url != "") { %>
                     <a href="<%= sheet_music_url %>" class="appbar__nav-item" target="_blank" rel="noreferrer noopener"
@@ -52,6 +53,9 @@
                     <div class="nav-drawer__panel">
                         <button class="nav-drawer__close" @click="menuOpen = false" aria-label="Fermer">✕</button>
                         <%= if (current_account != nil) { %>
+                        <a href="/tableau-de-bord" class="nav-drawer__item" @click="menuOpen = false"
+                            >Tableau de bord</a
+                        >
                         <a href="/evenements" class="nav-drawer__item" @click="menuOpen = false">Événements</a>
                         <%= if (sheet_music_url != "") { %>
                         <a

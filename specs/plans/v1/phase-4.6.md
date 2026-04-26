@@ -125,7 +125,6 @@ dependency wired.
 - Admin are able to modify RSVP for other accounts
 - RSVP update (`/evenements/{id}/rsvp`): yes/no/maybe; instrument selection for concerts
   (main instrument pre-selected); response clearing on transition away from yes
-- Admin event management list (`/admin/evenements`)
 - Create event (bulk RSVP creation for all active accounts on save)
 - Edit event (name, date/time, type; type-change effects on RSVPs and fields per spec table)
 - Delete event (cascades to all RSVPs)

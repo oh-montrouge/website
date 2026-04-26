@@ -415,6 +415,59 @@ func TestCompletePasswordReset_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// --- AC-M6: CompleteInvite seeds RSVPs for future events ---
+
+// stubRSVPSeedRepo is a minimal RSVPRepository stub that tracks SeedForAccount calls.
+type stubRSVPSeedRepo struct {
+	seeded bool
+	err    error
+}
+
+func (s *stubRSVPSeedRepo) SeedForEvent(_ *pop.Connection, _ int64) error { return s.err }
+func (s *stubRSVPSeedRepo) SeedForAccount(_ *pop.Connection, _ int64) error {
+	s.seeded = true
+	return s.err
+}
+func (s *stubRSVPSeedRepo) GetByAccountAndEvent(_ *pop.Connection, _, _ int64) (*models.RSVPRow, error) {
+	return nil, s.err
+}
+func (s *stubRSVPSeedRepo) Update(_ *pop.Connection, _ int64, _ string, _ *int64) error { return s.err }
+func (s *stubRSVPSeedRepo) DeleteByAccount(_ *pop.Connection, _ int64) error            { return s.err }
+func (s *stubRSVPSeedRepo) ClearFieldResponses(_ *pop.Connection, _ int64) error        { return s.err }
+func (s *stubRSVPSeedRepo) ListForEvent(_ *pop.Connection, _ int64) ([]models.RSVPListRow, error) {
+	return nil, s.err
+}
+func (s *stubRSVPSeedRepo) ResetYesRSVPs(_ *pop.Connection, _ int64) error    { return s.err }
+func (s *stubRSVPSeedRepo) ClearInstruments(_ *pop.Connection, _ int64) error { return s.err }
+func (s *stubRSVPSeedRepo) AddFieldResponse(_ *pop.Connection, _, _ int64, _ string) error {
+	return s.err
+}
+func (s *stubRSVPSeedRepo) ListFieldResponses(_ *pop.Connection, _ int64) ([]models.RSVPFieldResponseRow, error) {
+	return nil, s.err
+}
+
+func TestCompleteInvite_SeedsRSVPs(t *testing.T) {
+	rsvps := &stubRSVPSeedRepo{}
+	svc := services.AccountService{
+		Accounts:     stubAccountRepo{},
+		InviteTokens: &stubInviteTokenRepo{},
+		Events:       rsvps,
+	}
+	err := svc.CompleteInvite(nil, 10, 5, "hash", true)
+	assert.NoError(t, err)
+	assert.True(t, rsvps.seeded, "SeedForAccount should be called on invite completion")
+}
+
+func TestCompleteInvite_NilEvents_DoesNotPanic(t *testing.T) {
+	svc := services.AccountService{
+		Accounts:     stubAccountRepo{},
+		InviteTokens: &stubInviteTokenRepo{},
+		Events:       nil,
+	}
+	err := svc.CompleteInvite(nil, 10, 5, "hash", true)
+	assert.NoError(t, err)
+}
+
 // --- password strength tests ---
 
 func TestValidatePasswordStrength_TooShort(t *testing.T) {

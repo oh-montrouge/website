@@ -24,6 +24,7 @@ type ComplianceService struct {
 	InviteTokens InviteTokenRepository
 	ResetTokens  PasswordResetTokenRepository
 	Sessions     SessionRepository
+	Events       RSVPRepository // for RSVP deletion on anonymization (Phase 4.6)
 }
 
 // Anonymize performs an atomic GDPR erasure on the given account.
@@ -57,7 +58,11 @@ func (s ComplianceService) Anonymize(tx *pop.Connection, accountID int64) error 
 	if err := s.Roles.RemoveAllRoles(tx, accountID); err != nil {
 		return err
 	}
-	// RSVPs deleted in Phase 4.6 via EventRepository
+	if s.Events != nil {
+		if err := s.Events.DeleteByAccount(tx, accountID); err != nil {
+			return err
+		}
+	}
 	if err := s.InviteTokens.InvalidateExisting(tx, accountID); err != nil {
 		return err
 	}

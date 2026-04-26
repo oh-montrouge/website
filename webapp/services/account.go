@@ -117,6 +117,7 @@ type AccountService struct {
 	Roles        RoleRepository
 	InviteTokens InviteTokenRepository
 	ResetTokens  PasswordResetTokenRepository
+	Events       RSVPRepository // for RSVP seeding on account activation (Phase 4.6)
 }
 
 // IsAdmin reports whether the account with the given ID holds the admin role.
@@ -255,13 +256,19 @@ func (s AccountService) ValidateInviteToken(tx *pop.Connection, token string) (*
 	}, nil
 }
 
-// CompleteInvite activates the account and marks the invite token used, atomically.
-// Both operations run on the same tx; no RSVP seeding — that is wired in Phase 4.6.
+// CompleteInvite activates the account, marks the invite token used, and seeds RSVPs for
+// all future events. All three operations run on the same tx.
 func (s AccountService) CompleteInvite(tx *pop.Connection, tokenID, accountID int64, passwordHash string, phoneAddressConsent bool) error {
 	if err := s.Accounts.Activate(tx, accountID, passwordHash, phoneAddressConsent); err != nil {
 		return err
 	}
-	return s.InviteTokens.MarkUsed(tx, tokenID)
+	if err := s.InviteTokens.MarkUsed(tx, tokenID); err != nil {
+		return err
+	}
+	if s.Events != nil {
+		return s.Events.SeedForAccount(tx, accountID)
+	}
+	return nil
 }
 
 // GeneratePasswordResetToken creates a new reset token for an active account, invalidating any existing one.

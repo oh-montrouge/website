@@ -1,0 +1,7 @@
+- Split /tableau-de-bord and /evenements
+- Under /tableau-de-bord, go for cards instead of a table, and display the "Description", which can contain markdown. The description must be editable from the event detail page
+- Add an e2e test framework, aggregate coverage and post a PR message.
+- Add https://github.com/kucherenko/jscpd as a lefthook to catch duplicated code.
+  - Add `npx jscpd webapp --min-lines 10 --gitignore --threshold 4` in pre-commit, pass all files
+  - Run it and try to solve them
+  - Try to solve them - raise if one is really stupid, we might adjust the configuration.
