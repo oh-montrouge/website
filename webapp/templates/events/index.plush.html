@@ -1,0 +1,82 @@
+<div class="page-shell" x-data>
+    <div class="page-shell__header">
+        <div>
+            <nav aria-label="fil d'Ariane" class="breadcrumb">
+                <a href="/">Accueil</a>
+                <span class="breadcrumb__sep">›</span>
+                <span><%= if (dashboardView) { %>Tableau de bord<% } else { %>Événements<% } %></span>
+            </nav>
+            <h1><%= if (dashboardView) { %>Tableau de bord<% } else { %>Événements<% } %></h1>
+        </div>
+        <%= if (is_admin && !dashboardView) { %>
+        <a href="/admin/evenements/nouveau" class="btn btn--primary">+ Nouvel événement</a>
+        <% } %>
+    </div>
+
+    <%= if (eventsEmpty) { %>
+    <div class="empty">
+        <h3>Aucun événement</h3>
+        <p><%= if (dashboardView) { %>Aucun événement à venir pour le moment.<% } else { %>Aucun événement enregistré.<% } %></p>
+    </div>
+    <% } else { %>
+    <table class="table" aria-label="Liste des événements">
+        <thead>
+            <tr>
+                <th scope="col">Nom</th>
+                <th scope="col">Date</th>
+                <th scope="col">Type</th>
+                <th scope="col">Ma réponse</th>
+                <%= if (is_admin && !dashboardView) { %>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+                <% } %>
+            </tr>
+        </thead>
+        <tbody>
+            <%= for (e) in events { %>
+            <tr>
+                <td data-label="Nom">
+                    <a href="/evenements/<%= e.ID %>"><%= e.Name %></a>
+                </td>
+                <td data-label="Date"><%= e.Datetime.Format("02/01/2006 15h04") %></td>
+                <td data-label="Type">
+                    <%= if (e.EventType == "concert") { %>
+                        <span class="event-type event-type--concert">Concert</span>
+                    <% } else if (e.EventType == "rehearsal") { %>
+                        <span class="event-type event-type--rehearsal">Répétition</span>
+                    <% } else { %>
+                        <span class="event-type event-type--other">Autre</span>
+                    <% } %>
+                </td>
+                <td data-label="Ma réponse">
+                    <%= if (e.RSVPState == "yes") { %>
+                        <span class="rsvp-state rsvp-state--yes">Présent</span>
+                    <% } else if (e.RSVPState == "no") { %>
+                        <span class="rsvp-state rsvp-state--no">Absent</span>
+                    <% } else if (e.RSVPState == "maybe") { %>
+                        <span class="rsvp-state rsvp-state--maybe">Peut-être</span>
+                    <% } else if (e.RSVPState == "unanswered") { %>
+                        <span class="rsvp-state rsvp-state--unanswered">Sans réponse</span>
+                    <% } else { %>
+                        <span class="muted">—</span>
+                    <% } %>
+                </td>
+                <%= if (is_admin && !dashboardView) { %>
+                <td data-label="">
+                    <a href="/admin/evenements/<%= e.ID %>/modifier" class="btn btn--ghost btn--sm">Modifier</a>
+                    <button type="button" class="btn btn--danger btn--sm"
+                            @click="$store.confirmModal.open({
+                                title: 'Supprimer l\'événement',
+                                body: 'Supprimer « <%= e.Name %> » ? Toutes les participations seront supprimées.',
+                                confirmLabel: 'Supprimer',
+                                action: '/admin/evenements/<%= e.ID %>',
+                                httpMethod: 'DELETE'
+                            })">Supprimer</button>
+                </td>
+                <% } %>
+            </tr>
+            <% } %>
+        </tbody>
+    </table>
+    <% } %>
+    <%= partial("confirm_modal.html") %>
+</div>

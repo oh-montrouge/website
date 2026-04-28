@@ -3,8 +3,9 @@ package services
 import (
 	"time"
 
-	"github.com/gobuffalo/pop/v6"
 	"ohmontrouge/webapp/models"
+
+	"github.com/gobuffalo/pop/v6"
 )
 
 // InstrumentRepository is the interface services and handlers depend on to access instrument data.
@@ -115,4 +116,41 @@ type FeePaymentRepository interface {
 	ListByAccount(tx *pop.Connection, accountID int64) (models.FeePaymentRows, error)
 	GetByID(tx *pop.Connection, id int64) (*models.FeePaymentRow, error)
 	GetFirstInscriptionDate(tx *pop.Connection, accountID int64) (*time.Time, error)
+}
+
+// EventRepository is the interface EventService depends on to access event and field data.
+// The real implementation is models.EventStore; tests inject stubs.
+type EventRepository interface {
+	Create(tx *pop.Connection, name, eventType string, datetime time.Time) (int64, error)
+	GetByID(tx *pop.Connection, id int64) (*models.EventDetailRow, error)
+	Update(tx *pop.Connection, id int64, name, eventType string, datetime time.Time) error
+	Delete(tx *pop.Connection, id int64) error
+	ListUpcoming(tx *pop.Connection, accountID int64) ([]models.EventListRow, error)
+	ListAll(tx *pop.Connection, accountID int64) ([]models.EventListRow, error)
+	DeleteFields(tx *pop.Connection, eventID int64) error
+	AddField(tx *pop.Connection, eventID int64, label, fieldType string, required bool, position int) (int64, error)
+	GetFieldByID(tx *pop.Connection, fieldID int64) (*models.EventFieldRow, error)
+	UpdateField(tx *pop.Connection, fieldID int64, label, fieldType string, required bool, position int) error
+	DeleteField(tx *pop.Connection, fieldID int64) error
+	ListFields(tx *pop.Connection, eventID int64) ([]models.EventFieldRow, error)
+	ListFieldChoices(tx *pop.Connection, fieldID int64) ([]models.EventFieldChoiceRow, error)
+	CountFieldResponses(tx *pop.Connection, fieldID int64) (int, error)
+	AddFieldChoice(tx *pop.Connection, fieldID int64, label string, position int) (int64, error)
+	DeleteFieldChoices(tx *pop.Connection, fieldID int64) error
+}
+
+// RSVPRepository is the interface EventService depends on to access RSVP data.
+// The real implementation is models.RSVPStore; tests inject stubs.
+type RSVPRepository interface {
+	SeedForEvent(tx *pop.Connection, eventID int64) error
+	SeedForAccount(tx *pop.Connection, accountID int64) error
+	GetByAccountAndEvent(tx *pop.Connection, accountID, eventID int64) (*models.RSVPRow, error)
+	Update(tx *pop.Connection, rsvpID int64, state string, instrumentID *int64) error
+	DeleteByAccount(tx *pop.Connection, accountID int64) error
+	ClearFieldResponses(tx *pop.Connection, rsvpID int64) error
+	ListForEvent(tx *pop.Connection, eventID int64) ([]models.RSVPListRow, error)
+	ResetYesRSVPs(tx *pop.Connection, eventID int64) error
+	ClearInstruments(tx *pop.Connection, eventID int64) error
+	AddFieldResponse(tx *pop.Connection, rsvpID, fieldID int64, value string) error
+	ListFieldResponses(tx *pop.Connection, eventID int64) ([]models.RSVPFieldResponseRow, error)
 }

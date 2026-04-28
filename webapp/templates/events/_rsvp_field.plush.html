@@ -1,0 +1,26 @@
+<div class="field" style="margin-bottom:var(--sp-3)">
+    <label class="field__label"
+           for="<%= if (rsvpFieldIsAdmin) { %>admin-field-<%= field.ID %><% } else { %>field-<%= field.ID %><% } %>">
+        <%= field.Label %>
+        <%= if (field.Required) { %><span class="req" aria-hidden="true">*</span><% } %>
+    </label>
+    <%= if (field.FieldType == "choice") { %>
+    <select class="input"
+            id="<%= if (rsvpFieldIsAdmin) { %>admin-field-<%= field.ID %><% } else { %>field-<%= field.ID %><% } %>"
+            <%= if (rsvpFieldIsAdmin) { %>x-model="adminEditFieldValues['<%= field.ID %>']"<% } else { %>name="field_<%= field.ID %>" :required="<%= rsvpStateVar %> === 'yes' && <%= field.Required %>" :aria-required="String(<%= rsvpStateVar %> === 'yes' && <%= field.Required %>)"<% } %>>
+        <option value="">— Choisir —</option>
+        <%= for (ch) in field.Choices { %>
+        <option value="<%= ch.ID %>"
+                <%= if (!rsvpFieldIsAdmin && itoa(ch.ID) == event.OwnRSVP.FieldValue(field.ID)) { %>selected<% } %>><%= ch.Label %></option>
+        <% } %>
+    </select>
+    <% } else if (field.FieldType == "integer") { %>
+    <input class="input" type="number"
+           id="<%= if (rsvpFieldIsAdmin) { %>admin-field-<%= field.ID %><% } else { %>field-<%= field.ID %><% } %>"
+           <%= if (rsvpFieldIsAdmin) { %>x-model="adminEditFieldValues['<%= field.ID %>']"<% } else { %>name="field_<%= field.ID %>" value="<%= event.OwnRSVP.FieldValue(field.ID) %>" :required="<%= rsvpStateVar %> === 'yes' && <%= field.Required %>" :aria-required="String(<%= rsvpStateVar %> === 'yes' && <%= field.Required %>)"<% } %> />
+    <% } else { %>
+    <input class="input" type="text"
+           id="<%= if (rsvpFieldIsAdmin) { %>admin-field-<%= field.ID %><% } else { %>field-<%= field.ID %><% } %>"
+           <%= if (rsvpFieldIsAdmin) { %>x-model="adminEditFieldValues['<%= field.ID %>']"<% } else { %>name="field_<%= field.ID %>" value="<%= event.OwnRSVP.FieldValue(field.ID) %>" :required="<%= rsvpStateVar %> === 'yes' && <%= field.Required %>" :aria-required="String(<%= rsvpStateVar %> === 'yes' && <%= field.Required %>)"<% } %> />
+    <% } %>
+</div>

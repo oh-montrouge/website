@@ -1,7 +1,9 @@
 package actions
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"ohmontrouge/webapp/public"
@@ -20,6 +22,11 @@ func init() {
 		Helpers: render.Helpers{
 			"currentYear": func() int { return time.Now().Year() },
 			"fmtAmount":   func(amount float64) string { return fmt.Sprintf("%.2f", amount) },
+			"toJSON": func(v interface{}) string {
+				b, _ := json.Marshal(v)
+				return string(b)
+			},
+			"itoa": func(i int64) string { return strconv.FormatInt(i, 10) },
 		},
 	})
 }

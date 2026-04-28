@@ -90,7 +90,7 @@ func TestAuthHandler_Submit_Success_RedirectsToHome(t *testing.T) {
 	app.ServeHTTP(res, req)
 
 	assert.Equal(t, http.StatusSeeOther, res.Code)
-	assert.Equal(t, "/evenements", res.Header().Get("Location"))
+	assert.Equal(t, "/tableau-de-bord", res.Header().Get("Location"))
 }
 
 func TestAuthHandler_Logout_RedirectsToLogin(t *testing.T) {

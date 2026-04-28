@@ -54,7 +54,7 @@ func (h AuthHandler) Submit(c buffalo.Context) error {
 		}
 	}
 
-	return c.Redirect(http.StatusSeeOther, "/evenements")
+	return c.Redirect(http.StatusSeeOther, "/tableau-de-bord")
 }
 
 func (h AuthHandler) Logout(c buffalo.Context) error {

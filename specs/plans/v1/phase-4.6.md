@@ -63,9 +63,9 @@ See `webapp/architecture.md` for full detail. Key points:
 
 | Method | Notes |
 |--------|-------|
-| `ListForMember` | Past 30 days + upcoming; includes viewer's own RSVP state |
+| `ListForMember` | All upcoming events (today included); includes viewer's own RSVP state |
 | `GetDetail` | Full RSVP list + custom fields |
-| `AdminList` | All events for admin management view |
+| `ListAll` | All events, past and future; used for `/evenements` (admin controls shown conditionally) |
 | `Create` | Bulk RSVP seed for all active accounts on save |
 | `Update` | Type-change RSVP effects applied atomically (see implementation notes) |
 | `Delete` | DB FK cascades to RSVPs |
@@ -116,14 +116,15 @@ dependency wired.
 
 ## Deliverables
 
-- Event list for authenticated users (`/evenements`): past 30 days + all upcoming, own
-  RSVP state shown
+- Dashboard (`/tableau-de-bord`): all upcoming events (today included), own RSVP state
+  shown; navigation label "Tableau de bord"
+- Full event list (`/evenements`): all events past and future; admin create/edit/delete
+  controls shown conditionally for admin role
 - Event detail page: pupitre headcounts; full RSVP list; for concerts, instrument per `yes` RSVP; for
   `other`, field responses per `yes` RSVP
 - Admin are able to modify RSVP for other accounts
 - RSVP update (`/evenements/{id}/rsvp`): yes/no/maybe; instrument selection for concerts
   (main instrument pre-selected); response clearing on transition away from yes
-- Admin event management list (`/admin/evenements`)
 - Create event (bulk RSVP creation for all active accounts on save)
 - Edit event (name, date/time, type; type-change effects on RSVPs and fields per spec table)
 - Delete event (cascades to all RSVPs)
@@ -171,9 +172,9 @@ one `rsvp_field_response` → return an error; field is unchanged.
 
 ### Human-verified
 
-**AC-H1 — Event list shows own RSVP state**
-The `/evenements` page shows each upcoming event with the viewer's current RSVP state
-(unanswered / yes / no / maybe). Past events (older than 30 days) are not shown.
+**AC-H1 — Dashboard shows own RSVP state**
+The `/tableau-de-bord` page shows each upcoming event (today included) with the viewer's
+current RSVP state (unanswered / yes / no / maybe). Past events are not shown.
 
 **AC-H2 — RSVP form is context-aware**
 On a concert event detail page: RSVP form includes an instrument dropdown pre-selected

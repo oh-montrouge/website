@@ -1,0 +1,65 @@
+<div class="page-shell">
+    <div class="page-shell__header">
+        <div>
+            <nav aria-label="fil d'Ariane" class="breadcrumb">
+                <a href="/admin/">Administration</a>
+                <span class="breadcrumb__sep">›</span>
+                <a href="/admin/evenements">Événements</a>
+                <span class="breadcrumb__sep">›</span>
+                <span>Nouvel événement</span>
+            </nav>
+            <h1>Nouvel événement</h1>
+        </div>
+    </div>
+
+    <section class="card" style="max-width:560px">
+        <div class="card__body">
+            <%= if (formError != "") { %>
+            <div class="alert alert--danger" role="alert" style="margin-bottom:var(--sp-4)"><%= formError %></div>
+            <% } %>
+
+            <form action="/admin/evenements" method="post">
+                <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+
+                <div class="field" style="margin-bottom:var(--sp-4)">
+                    <label class="field__label" for="event-name">
+                        Nom <span class="req" aria-hidden="true">*</span>
+                    </label>
+                    <input class="input" type="text" id="event-name" name="name"
+                           required aria-required="true" autofocus />
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-4)">
+                    <div class="field">
+                        <label class="field__label" for="event-date">
+                            Date <span class="req" aria-hidden="true">*</span>
+                        </label>
+                        <input class="input" type="date" id="event-date" name="date"
+                               required aria-required="true" />
+                    </div>
+                    <div class="field">
+                        <label class="field__label" for="event-time">Heure</label>
+                        <input class="input" type="time" id="event-time" name="time" value="20:00" />
+                    </div>
+                </div>
+
+                <div class="field" style="margin-bottom:var(--sp-5)">
+                    <label class="field__label" for="event-type">
+                        Type <span class="req" aria-hidden="true">*</span>
+                    </label>
+                    <select class="input" id="event-type" name="event_type" required aria-required="true">
+                        <option value="">— Choisir —</option>
+                        <option value="rehearsal">Répétition</option>
+                        <option value="concert">Concert</option>
+                        <option value="other">Autre</option>
+                    </select>
+                </div>
+
+                <div style="display:flex;gap:var(--sp-3)">
+                    <button type="submit" class="btn btn--primary">Créer l'événement</button>
+                    <a href="/admin/evenements" class="btn btn--ghost">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>

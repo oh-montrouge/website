@@ -1,0 +1,375 @@
+<div class="page-shell"
+     x-data="{
+        searchQ: '',
+        filterState: 'all',
+        filterInstrument: '',
+        showRow(state, instrument, name) {
+            if (this.filterState !== 'all' && state !== this.filterState) return false;
+            if (this.filterInstrument && instrument !== this.filterInstrument) return false;
+            if (this.searchQ && !name.toLowerCase().includes(this.searchQ.toLowerCase())) return false;
+            return true;
+        },
+        adminEditMusicianID: 0,
+        adminEditMusicianName: '',
+        adminEditState: 'unanswered',
+        adminEditInstrumentID: 0,
+        adminEditFieldValues: {},
+        adminEditSaving: false,
+        openAdminEdit(musicianID, name, state, instrumentID, fieldValues) {
+            this.adminEditMusicianID = musicianID;
+            this.adminEditMusicianName = name;
+            this.adminEditState = state;
+            this.adminEditInstrumentID = instrumentID || 0;
+            this.adminEditFieldValues = Object.assign({}, fieldValues);
+            document.getElementById('admin-rsvp-modal').showModal();
+        },
+        async saveAdminEdit(eventID) {
+            this.adminEditSaving = true;
+            const token = document.querySelector('meta[name=csrf-token]').content;
+            const fieldResponses = Object.entries(this.adminEditFieldValues)
+                .filter(([k, v]) => v !== '' && v !== null && v !== undefined)
+                .map(([k, v]) => ({ field_id: parseInt(k), value: String(v) }));
+            try {
+                const res = await fetch('/admin/evenements/' + eventID + '/rsvp/' + this.adminEditMusicianID, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+                    body: JSON.stringify({
+                        state: this.adminEditState,
+                        instrument_id: this.adminEditInstrumentID > 0 ? this.adminEditInstrumentID : null,
+                        field_responses: fieldResponses
+                    })
+                });
+                if (!res.ok) { const d = await res.json(); alert(d.error || 'Erreur'); }
+                else { document.getElementById('admin-rsvp-modal').close(); location.reload(); }
+            } catch { alert('Erreur réseau'); }
+            this.adminEditSaving = false;
+        }
+     }">
+    <div class="page-shell__header">
+        <div>
+            <nav aria-label="fil d'Ariane" class="breadcrumb">
+                <a href="/">Accueil</a>
+                <span class="breadcrumb__sep">›</span>
+                <a href="/evenements">Événements</a>
+                <span class="breadcrumb__sep">›</span>
+                <span><%= event.Name %></span>
+            </nav>
+            <div style="display:flex;align-items:baseline;gap:var(--sp-3)">
+                <h1><%= event.Name %></h1>
+                <%= if (event.EventType == "concert") { %>
+                    <span class="event-type event-type--concert">Concert</span>
+                <% } else if (event.EventType == "rehearsal") { %>
+                    <span class="event-type event-type--rehearsal">Répétition</span>
+                <% } else { %>
+                    <span class="event-type event-type--other">Autre</span>
+                <% } %>
+            </div>
+            <p class="muted" style="font-size:var(--fs-15);margin-top:var(--sp-1)"><%= event.Datetime.Format("lundi 2 janvier 2006 à 15h04") %></p>
+        </div>
+        <%= if (is_admin) { %>
+        <a href="/admin/evenements/<%= event.ID %>/modifier" class="btn btn--ghost btn--sm">Modifier</a>
+        <% } %>
+    </div>
+
+    <div class="split split--sidebar-first-mobile">
+        <!-- Main: RSVP list -->
+        <div>
+            <!-- Pupitre table (concerts only) -->
+            <%= if (event.EventType == "concert" && len(event.Pupitre) > 0) { %>
+            <section class="card" style="margin-bottom:var(--sp-5)">
+                <div class="card__header">
+                    <h2>Pupitre</h2>
+                </div>
+                <div class="card__body" style="padding:0">
+                    <table class="pupitre" aria-label="Répartition par pupitre">
+                        <thead>
+                            <tr>
+                                <th scope="col">Instrument</th>
+                                <th scope="col">Présents</th>
+                                <th scope="col">Peut-être</th>
+                                <th scope="col">Absents</th>
+                                <th scope="col">Sans rép.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%= for (row) in event.Pupitre { %>
+                            <tr data-instrument="<%= row.InstrumentName %>"
+                                @click="filterInstrument = filterInstrument === '<%= row.InstrumentName %>' ? '' : '<%= row.InstrumentName %>'"
+                                :style="filterInstrument === '<%= row.InstrumentName %>' ? 'background:var(--paper-2);' : ''"
+                                title="Filtrer par <%= row.InstrumentName %>">
+                                <td data-label="Instrument"><%= row.InstrumentName %></td>
+                                <td data-label="Présents"><%= row.Yes %></td>
+                                <td data-label="Peut-être"><%= row.Maybe %></td>
+                                <td data-label="Absents"><%= row.No %></td>
+                                <td data-label="Sans rép."><%= row.Unanswered %></td>
+                            </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <% } %>
+
+            <!-- RSVP list -->
+            <section class="card">
+                <div class="card__header">
+                    <h2>Participations</h2>
+                </div>
+                <div class="card__body">
+                    <!-- Search and filter controls -->
+                    <div style="display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-4)">
+                        <input type="search" class="input" placeholder="Rechercher par nom…"
+                               x-model="searchQ" aria-label="Rechercher un musicien" />
+                        <div class="chip-group" role="group" aria-label="Filtrer par réponse">
+                            <button type="button" class="chip"
+                                    :aria-pressed="filterState === 'all'"
+                                    :class="filterState === 'all' && 'chip--active'"
+                                    @click="filterState = 'all'">Tous</button>
+                            <button type="button" class="chip"
+                                    :aria-pressed="filterState === 'yes'"
+                                    :class="filterState === 'yes' && 'chip--active'"
+                                    @click="filterState = 'yes'">Présents</button>
+                            <button type="button" class="chip"
+                                    :aria-pressed="filterState === 'maybe'"
+                                    :class="filterState === 'maybe' && 'chip--active'"
+                                    @click="filterState = 'maybe'">Peut-être</button>
+                            <button type="button" class="chip"
+                                    :aria-pressed="filterState === 'no'"
+                                    :class="filterState === 'no' && 'chip--active'"
+                                    @click="filterState = 'no'">Absents</button>
+                            <button type="button" class="chip"
+                                    :aria-pressed="filterState === 'unanswered'"
+                                    :class="filterState === 'unanswered' && 'chip--active'"
+                                    @click="filterState = 'unanswered'">Sans réponse</button>
+                        </div>
+                    </div>
+
+                    <table class="table" aria-label="Liste des participations">
+                        <thead>
+                            <tr>
+                                <th scope="col">Musicien</th>
+                                <th scope="col">Réponse</th>
+                                <%= if (event.EventType == "concert") { %>
+                                <th scope="col">Instrument</th>
+                                <% } %>
+                                <%= if (event.EventType == "other" && len(event.Fields) > 0) { %>
+                                <th scope="col">Informations</th>
+                                <% } %>
+                                <%= if (is_admin) { %>
+                                <th scope="col"><span class="sr-only">Actions</span></th>
+                                <% } %>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%= for (row) in event.RSVPs { %>
+                            <tr data-row-state="<%= row.State %>"
+                                data-row-instrument="<%= row.MainInstrument %>"
+                                data-row-name="<%= row.DisplayName %>"
+                                x-show="showRow($el.dataset.rowState, $el.dataset.rowInstrument, $el.dataset.rowName)">
+                                <td data-label="Musicien"><%= row.DisplayName %></td>
+                                <td data-label="Réponse">
+                                    <%= if (row.State == "yes") { %>
+                                        <span class="rsvp-state rsvp-state--yes">Présent</span>
+                                    <% } else if (row.State == "no") { %>
+                                        <span class="rsvp-state rsvp-state--no">Absent</span>
+                                    <% } else if (row.State == "maybe") { %>
+                                        <span class="rsvp-state rsvp-state--maybe">Peut-être</span>
+                                    <% } else { %>
+                                        <span class="rsvp-state rsvp-state--unanswered">Sans réponse</span>
+                                    <% } %>
+                                </td>
+                                <%= if (event.EventType == "concert") { %>
+                                <td data-label="Instrument">
+                                    <%= if (row.InstrumentName != "") { %>
+                                        <%= row.InstrumentName %>
+                                    <% } else { %>
+                                        <span class="muted">—</span>
+                                    <% } %>
+                                </td>
+                                <% } %>
+                                <%= if (event.EventType == "other" && len(event.Fields) > 0) { %>
+                                <td data-label="Informations">
+                                    <%= if (row.State == "yes" && len(row.FieldResponses) > 0) { %>
+                                        <dl class="kv" style="grid-template-columns:auto 1fr;gap:4px var(--sp-3)">
+                                            <%= for (fr) in row.FieldResponses { %>
+                                            <dt style="font-size:var(--fs-12)"><%= fr.FieldLabel %></dt>
+                                            <dd style="font-size:var(--fs-12)"><%= fr.DisplayValue %></dd>
+                                            <% } %>
+                                        </dl>
+                                    <% } else { %>
+                                        <span class="muted">—</span>
+                                    <% } %>
+                                </td>
+                                <% } %>
+                                <%= if (is_admin) { %>
+                                <td data-label="">
+                                    <button type="button" class="btn btn--ghost btn--sm"
+                                            data-musician-id="<%= row.AccountID %>"
+                                            data-musician-name="<%= row.DisplayName %>"
+                                            data-state="<%= row.State %>"
+                                            data-instrument-id="<%= row.InstrumentID %>"
+                                            data-field-values='<%= toJSON(row.FieldValueMap()) %>'
+                                            @click="openAdminEdit(
+                                                parseInt($el.dataset.musicianId),
+                                                $el.dataset.musicianName,
+                                                $el.dataset.state,
+                                                parseInt($el.dataset.instrumentId) || 0,
+                                                JSON.parse($el.dataset.fieldValues)
+                                            )">Modifier</button>
+                                </td>
+                                <% } %>
+                            </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- Sidebar: own RSVP -->
+        <aside>
+            <%= if (event.OwnRSVP != nil) { %>
+            <section class="card">
+                <div class="card__header">
+                    <h2>Ma participation</h2>
+                </div>
+                <div class="card__body"
+                     x-data="{ rsvp: '<%= event.OwnRSVP.State %>' }">
+                    <form action="/evenements/<%= event.ID %>/rsvp" method="post">
+                        <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>" />
+
+                        <fieldset style="border:none;padding:0;margin:0 0 var(--sp-4)">
+                            <legend style="font-size:var(--fs-14);font-weight:600;margin-bottom:var(--sp-3)">Votre réponse</legend>
+                            <div class="radio-pill-group">
+                                <div class="radio-pill">
+                                    <input type="radio" id="rsvp-yes" name="state" value="yes"
+                                           <%= if (event.OwnRSVP.State == "yes") { %>checked<% } %>
+                                           x-model="rsvp" />
+                                    <label for="rsvp-yes">Présent</label>
+                                </div>
+                                <div class="radio-pill">
+                                    <input type="radio" id="rsvp-no" name="state" value="no"
+                                           <%= if (event.OwnRSVP.State == "no") { %>checked<% } %>
+                                           x-model="rsvp" />
+                                    <label for="rsvp-no">Absent</label>
+                                </div>
+                                <div class="radio-pill">
+                                    <input type="radio" id="rsvp-maybe" name="state" value="maybe"
+                                           <%= if (event.OwnRSVP.State == "maybe") { %>checked<% } %>
+                                           x-model="rsvp" />
+                                    <label for="rsvp-maybe">Peut-être</label>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- Instrument selection (concerts only, shown when yes selected) -->
+                        <%= if (event.EventType == "concert") { %>
+                        <div class="field" x-show="rsvp === 'yes'" style="margin-bottom:var(--sp-4)">
+                            <label class="field__label" for="rsvp-instrument">
+                                Instrument <span class="req" aria-hidden="true">*</span>
+                            </label>
+                            <select class="input" id="rsvp-instrument" name="instrument_id"
+                                    :required="rsvp === 'yes'" :aria-required="String(rsvp === 'yes')">
+                                <option value="">— Choisir —</option>
+                                <%= for (instr) in instruments { %>
+                                <option value="<%= instr.ID %>" <%= if (instr.ID == selectedInstrumentID) { %>selected<% } %>>
+                                    <%= instr.Name %>
+                                </option>
+                                <% } %>
+                            </select>
+                        </div>
+                        <% } %>
+
+                        <!-- Custom fields (other events only, shown when yes selected) -->
+                        <%= if (event.EventType == "other" && len(event.Fields) > 0) { %>
+                        <div x-show="rsvp === 'yes'" style="margin-bottom:var(--sp-4)">
+                            <%= for (field) in event.Fields { %>
+                            <%= partial("events/rsvp_field.html", {"rsvpFieldIsAdmin": false, "rsvpStateVar": "rsvp"}) %>
+                            <% } %>
+                        </div>
+                        <% } %>
+
+                        <button type="submit" class="btn btn--primary" style="width:100%">Enregistrer</button>
+                    </form>
+                </div>
+            </section>
+            <% } else { %>
+            <section class="card">
+                <div class="card__body">
+                    <p class="muted" style="font-size:var(--fs-14)">Aucune participation enregistrée pour cet événement.</p>
+                </div>
+            </section>
+            <% } %>
+        </aside>
+    </div>
+
+    <!-- Admin RSVP edit modal -->
+    <%= if (is_admin) { %>
+    <dialog id="admin-rsvp-modal"
+            aria-labelledby="admin-rsvp-modal-title"
+            style="padding:var(--sp-5);border:1px solid var(--line-strong);border-radius:var(--r-4);box-shadow:var(--shadow-3);max-width:480px;width:90%">
+        <div style="margin-bottom:var(--sp-4)">
+            <h3 id="admin-rsvp-modal-title" style="margin-bottom:var(--sp-1)">Modifier la participation</h3>
+            <p class="muted" x-text="adminEditMusicianName" style="font-size:var(--fs-14)"></p>
+        </div>
+
+        <fieldset style="border:none;padding:0;margin:0 0 var(--sp-4)">
+            <legend style="font-size:var(--fs-14);font-weight:600;margin-bottom:var(--sp-3)">Réponse</legend>
+            <div class="radio-pill-group">
+                <div class="radio-pill">
+                    <input type="radio" id="admin-rsvp-yes" name="admin_state" value="yes"
+                           x-model="adminEditState" />
+                    <label for="admin-rsvp-yes">Présent</label>
+                </div>
+                <div class="radio-pill">
+                    <input type="radio" id="admin-rsvp-no" name="admin_state" value="no"
+                           x-model="adminEditState" />
+                    <label for="admin-rsvp-no">Absent</label>
+                </div>
+                <div class="radio-pill">
+                    <input type="radio" id="admin-rsvp-maybe" name="admin_state" value="maybe"
+                           x-model="adminEditState" />
+                    <label for="admin-rsvp-maybe">Peut-être</label>
+                </div>
+                <div class="radio-pill">
+                    <input type="radio" id="admin-rsvp-unanswered" name="admin_state" value="unanswered"
+                           x-model="adminEditState" />
+                    <label for="admin-rsvp-unanswered">Sans réponse</label>
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- Instrument (concerts only) -->
+        <%= if (event.EventType == "concert") { %>
+        <div class="field" x-show="adminEditState === 'yes'" style="margin-bottom:var(--sp-4)">
+            <label class="field__label" for="admin-rsvp-instrument">Instrument</label>
+            <select class="input" id="admin-rsvp-instrument"
+                    x-model="adminEditInstrumentID">
+                <option value="0">— Choisir —</option>
+                <%= for (instr) in instruments { %>
+                <option value="<%= instr.ID %>"><%= instr.Name %></option>
+                <% } %>
+            </select>
+        </div>
+        <% } %>
+
+        <!-- Custom fields (other events only) -->
+        <%= if (event.EventType == "other" && len(event.Fields) > 0) { %>
+        <div x-show="adminEditState === 'yes'" style="margin-bottom:var(--sp-4)">
+            <%= for (field) in event.Fields { %>
+            <%= partial("events/rsvp_field.html", {"rsvpFieldIsAdmin": true, "rsvpStateVar": "adminEditState"}) %>
+            <% } %>
+        </div>
+        <% } %>
+
+        <div style="display:flex;gap:var(--sp-3)">
+            <button type="button" class="btn btn--primary btn--sm" :disabled="adminEditSaving"
+                    @click="saveAdminEdit(<%= event.ID %>)">
+                <span x-text="adminEditSaving ? '…' : 'Enregistrer'"></span>
+            </button>
+            <button type="button" class="btn btn--ghost btn--sm"
+                    @click="document.getElementById('admin-rsvp-modal').close()">Annuler</button>
+        </div>
+    </dialog>
+    <% } %>
+</div>

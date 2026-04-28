@@ -11,6 +11,7 @@ go = "1.26.2"
 "go:github.com/gobuffalo/buffalo-pop/v3" = "v3.0.7"
 lefthook = "2.1.5"
 golangci-lint = "2.11.4"
+node = {version = "latest", postinstall = "npm install -g jscpd"}
 
 [prepare.lefthook]
 auto = true
