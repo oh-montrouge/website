@@ -85,7 +85,8 @@ All developer-facing operations are exposed as `mise run <task>` commands (defin
 | `seed-admin` | Create first admin account (bootstrap; refuses if one already exists) |
 | `recover-admin` | Emergency: force-reset an active account's password directly in the DB (see [Configuration spec](02-configuration.md)) |
 | `seed-dev` | Populate dev DB with dummy data (local only) |
-| `test` | Run test suite against real PostgreSQL |
+| `test` | Run unit/integration test suite against real PostgreSQL |
+| `e2e` | Start application, run Playwright e2e suite, tear down (added during adj-2 T2) |
 | `lint` | Run full linter suite (`golangci-lint`) |
 | `deploy` | Deploy to production VPS via SSH (see [CI/CD spec](06-ci-cd.md)) |
 
@@ -132,6 +133,7 @@ instructions, and trade-offs.
 | HTTP handlers | `net/http/httptest` + Buffalo test helpers |
 | DB (integration) | Real PostgreSQL via **testcontainers-go** |
 | Race detection | `go test -race` |
+| E2e / browser | **Playwright** (TypeScript, version pinned in `e2e/package.json`); see ADR 010 |
 
 Tests run against a real PostgreSQL instance (not mocks) to ensure migration correctness and
 query behaviour match production. testcontainers-go starts and tears down a PostgreSQL
