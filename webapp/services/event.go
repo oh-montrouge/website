@@ -541,15 +541,7 @@ func (s EventService) AddField(tx *pop.Connection, eventID int64, label, fieldTy
 	if err != nil {
 		return err
 	}
-
-	if fieldType == "choice" {
-		for _, c := range choices {
-			if _, err := s.Events.AddFieldChoice(tx, fieldID, c.Label, c.Position); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return s.addChoices(tx, fieldID, fieldType, choices)
 }
 
 // UpdateField updates a field's properties. Blocked when any responses exist.
@@ -570,6 +562,11 @@ func (s EventService) UpdateField(tx *pop.Connection, fieldID int64, label, fiel
 	if err := s.Events.DeleteFieldChoices(tx, fieldID); err != nil {
 		return err
 	}
+	return s.addChoices(tx, fieldID, fieldType, choices)
+}
+
+// addChoices inserts choice rows for a field when fieldType is "choice".
+func (s EventService) addChoices(tx *pop.Connection, fieldID int64, fieldType string, choices []FieldChoiceInput) error {
 	if fieldType == "choice" {
 		for _, c := range choices {
 			if _, err := s.Events.AddFieldChoice(tx, fieldID, c.Label, c.Position); err != nil {

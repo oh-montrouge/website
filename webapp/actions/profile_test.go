@@ -5,10 +5,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gobuffalo/buffalo"
 	"github.com/stretchr/testify/assert"
 	"ohmontrouge/webapp/services"
 )
+
+func runProfileShow(t *testing.T, h ProfileHandler, account *services.AccountDTO) *httptest.ResponseRecorder {
+	t.Helper()
+	return serveGET(t, "/profil", h.Show, injectContextValue("current_account", account))
+}
 
 // --- Show tests ---
 
@@ -20,16 +24,7 @@ func TestProfileHandler_Show_RendersProfile(t *testing.T) {
 		MainInstrumentName: "Clarinette",
 	}
 	account := &services.AccountDTO{ID: 1, Email: "alice@example.com", Status: services.StatusActive}
-
-	h := ProfileHandler{Membership: &stubMusicianProfile{profile: profile}}
-	app := newTestApp(func(a *buffalo.App) {
-		a.Use(injectContextValue("current_account", account))
-		a.GET("/profil", h.Show)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/profil", nil)
-	app.ServeHTTP(res, req)
+	res := runProfileShow(t, ProfileHandler{Membership: &stubMusicianProfile{profile: profile}}, account)
 
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), "Alice")
@@ -50,16 +45,7 @@ func TestProfileHandler_Show_PhoneAddress_ShownWhenConsentTrue(t *testing.T) {
 		PhoneAddressConsent: true,
 	}
 	account := &services.AccountDTO{ID: 1, Email: "bob@example.com", Status: services.StatusActive}
-
-	h := ProfileHandler{Membership: &stubMusicianProfile{profile: profile}}
-	app := newTestApp(func(a *buffalo.App) {
-		a.Use(injectContextValue("current_account", account))
-		a.GET("/profil", h.Show)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/profil", nil)
-	app.ServeHTTP(res, req)
+	res := runProfileShow(t, ProfileHandler{Membership: &stubMusicianProfile{profile: profile}}, account)
 
 	assert.Equal(t, http.StatusOK, res.Code)
 	body := res.Body.String()
@@ -78,16 +64,7 @@ func TestProfileHandler_Show_PhoneAddress_HiddenWhenConsentFalse(t *testing.T) {
 		PhoneAddressConsent: false,
 	}
 	account := &services.AccountDTO{ID: 1, Email: "claire@example.com", Status: services.StatusActive}
-
-	h := ProfileHandler{Membership: &stubMusicianProfile{profile: profile}}
-	app := newTestApp(func(a *buffalo.App) {
-		a.Use(injectContextValue("current_account", account))
-		a.GET("/profil", h.Show)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/profil", nil)
-	app.ServeHTTP(res, req)
+	res := runProfileShow(t, ProfileHandler{Membership: &stubMusicianProfile{profile: profile}}, account)
 
 	assert.Equal(t, http.StatusOK, res.Code)
 	body := res.Body.String()

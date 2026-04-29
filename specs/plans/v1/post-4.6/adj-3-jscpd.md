@@ -1,6 +1,6 @@
 # Adj-3 — jscpd Duplicate-Code Detection
 
-**Status:** Not started
+**Status:** Complete — all tasks done. jscpd exits 0 on both Go (<0.25%) and markup (0%) passes.
 
 **Goal:** Add `jscpd` as a Lefthook pre-commit hook to catch duplicated code blocks, run
 it against the current codebase, and fix detected violations.

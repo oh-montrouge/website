@@ -73,42 +73,21 @@ func TestHomeIndex_AuthenticatedWithoutSheetMusicURL_NoPartitions(t *testing.T) 
 // --- AC-M3: privacy notice link present on all pages ---
 
 func TestHomeIndex_ContainsPrivacyLink(t *testing.T) {
-	app := newTestApp(func(a *buffalo.App) {
-		a.Use(injectContextValue("sheet_music_url", ""))
-		a.GET("/", home.Index)
-	})
-
-	res := httptest.NewRecorder()
-	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
-
+	res := serveGET(t, "/", home.Index, injectContextValue("sheet_music_url", ""))
 	assert.True(t, strings.Contains(res.Body.String(), "/politique-de-confidentialite"),
 		"homepage should contain a link to the privacy notice")
 }
 
 func TestLoginForm_ContainsPrivacyLink(t *testing.T) {
-	auth := AuthHandler{}
-	app := newTestApp(func(a *buffalo.App) {
-		a.Use(injectContextValue("sheet_music_url", ""))
-		a.GET("/connexion", auth.Form)
-	})
-
-	res := httptest.NewRecorder()
-	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/connexion", nil))
-
+	res := serveGET(t, "/connexion", AuthHandler{}.Form, injectContextValue("sheet_music_url", ""))
 	assert.True(t, strings.Contains(res.Body.String(), "/politique-de-confidentialite"),
 		"login page should contain a link to the privacy notice")
 }
 
 func TestAuthenticatedPage_ContainsPrivacyLink(t *testing.T) {
-	app := newTestApp(func(a *buffalo.App) {
-		a.Use(injectContextValue("current_account", &services.AccountDTO{ID: 1, Email: "test@example.com", Status: services.StatusActive}))
-		a.Use(injectContextValue("sheet_music_url", ""))
-		a.GET("/", home.Index)
-	})
-
-	res := httptest.NewRecorder()
-	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
-
+	res := serveGET(t, "/", home.Index,
+		injectContextValue("current_account", &services.AccountDTO{ID: 1, Email: "test@example.com", Status: services.StatusActive}),
+		injectContextValue("sheet_music_url", ""))
 	assert.True(t, strings.Contains(res.Body.String(), "/politique-de-confidentialite"),
 		"authenticated page should contain a link to the privacy notice")
 }

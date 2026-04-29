@@ -73,32 +73,28 @@ func newFeePaymentsTestApp(h FeePaymentsHandler) http.Handler {
 	})
 }
 
-// --- Create ---
-
-func TestFeePaymentsHandler_Create_Success(t *testing.T) {
-	h := FeePaymentsHandler{FeePayments: &stubFeePaymentManager{}}
-	app := newFeePaymentsTestApp(h)
-
-	body := strings.NewReader("season_id=1&amount=50.00&payment_date=2025-09-10&payment_type=ch%C3%A8que&comment=")
-	req := httptest.NewRequest(http.MethodPost, "/admin/musiciens/1/cotisations", body)
+// runFeePaymentCreate POSTs to the Create endpoint and returns the response.
+func runFeePaymentCreate(t *testing.T, app http.Handler, bodyStr string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/admin/musiciens/1/cotisations", strings.NewReader(bodyStr))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	res := httptest.NewRecorder()
 	app.ServeHTTP(res, req)
+	return res
+}
 
+// --- Create ---
+
+func TestFeePaymentsHandler_Create_Success(t *testing.T) {
+	app := newFeePaymentsTestApp(FeePaymentsHandler{FeePayments: &stubFeePaymentManager{}})
+	res := runFeePaymentCreate(t, app, "season_id=1&amount=50.00&payment_date=2025-09-10&payment_type=ch%C3%A8que&comment=")
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Equal(t, "/admin/musiciens/1", res.Header().Get("Location"))
 }
 
 func TestFeePaymentsHandler_Create_DuplicateFlash(t *testing.T) {
-	h := FeePaymentsHandler{FeePayments: &stubFeePaymentManager{recordErr: services.ErrDuplicatePayment}}
-	app := newFeePaymentsTestApp(h)
-
-	body := strings.NewReader("season_id=1&amount=50.00&payment_date=2025-09-10&payment_type=ch%C3%A8que")
-	req := httptest.NewRequest(http.MethodPost, "/admin/musiciens/1/cotisations", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	res := httptest.NewRecorder()
-	app.ServeHTTP(res, req)
-
+	app := newFeePaymentsTestApp(FeePaymentsHandler{FeePayments: &stubFeePaymentManager{recordErr: services.ErrDuplicatePayment}})
+	res := runFeePaymentCreate(t, app, "season_id=1&amount=50.00&payment_date=2025-09-10&payment_type=ch%C3%A8que")
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Equal(t, "/admin/musiciens/1", res.Header().Get("Location"))
 }

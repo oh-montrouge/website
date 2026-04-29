@@ -30,18 +30,8 @@ type ComplianceService struct {
 // Anonymize performs an atomic GDPR erasure on the given account.
 // Last-admin protection is checked before any mutation.
 func (s ComplianceService) Anonymize(tx *pop.Connection, accountID int64) error {
-	isAdmin, err := s.Roles.HasRole(tx, accountID, RoleAdmin)
-	if err != nil {
+	if err := checkLastAdmin(tx, s.Roles, accountID); err != nil {
 		return err
-	}
-	if isAdmin {
-		count, err := s.Roles.CountActiveAdmins(tx)
-		if err != nil {
-			return err
-		}
-		if count <= 1 {
-			return ErrLastAdmin
-		}
 	}
 
 	token, err := generateCSPRNGToken()

@@ -10,7 +10,7 @@ Improvements and infrastructure additions following phase 4.6 completion.
 |---|-----------|------|--------|
 | 1 | Dashboard redesign + event description | [post-4.6/adj-1-dashboard-description.md](post-4.6/adj-1-dashboard-description.md) | Not started |
 | 2 | E2e test framework + CI coverage | [post-4.6/adj-2-e2e.md](post-4.6/adj-2-e2e.md) | Not started |
-| 3 | jscpd duplicate-code detection | [post-4.6/adj-3-jscpd.md](post-4.6/adj-3-jscpd.md) | Not started |
+| 3 | jscpd duplicate-code detection | [post-4.6/adj-3-jscpd.md](post-4.6/adj-3-jscpd.md) | Complete |
 
 ---
 

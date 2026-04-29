@@ -55,16 +55,22 @@ func TestSeasonStore_List_OrderedByStartDateDesc(t *testing.T) {
 	assert.Equal(t, "2024-2025", ss[1].Label)
 }
 
+// seedTwoSeasons truncates, creates two seasons (2024-2025 current, 2025-2026 next), and returns them.
+func seedTwoSeasons(t *testing.T) (SeasonStore, *Season, *Season) {
+	t.Helper()
+	truncateAll(t)
+	store := SeasonStore{}
+	s1 := &Season{Label: "2024-2025", StartDate: s24Start, EndDate: s24End, IsCurrent: true}
+	s2 := &Season{Label: "2025-2026", StartDate: s25Start, EndDate: s25End}
+	require.NoError(t, DB.Create(s1))
+	require.NoError(t, DB.Create(s2))
+	return store, s1, s2
+}
+
 // TestSeasonStore_DesignateCurrent_TransfersDesignation verifies that calling
 // DesignateCurrent clears the previous current and sets the new one (AC-M2).
 func TestSeasonStore_DesignateCurrent_TransfersDesignation(t *testing.T) {
-	truncateAll(t)
-	store := SeasonStore{}
-
-	current := &Season{Label: "2024-2025", StartDate: s24Start, EndDate: s24End, IsCurrent: true}
-	next := &Season{Label: "2025-2026", StartDate: s25Start, EndDate: s25End}
-	require.NoError(t, DB.Create(current))
-	require.NoError(t, DB.Create(next))
+	store, current, next := seedTwoSeasons(t)
 
 	require.NoError(t, store.DesignateCurrent(DB, next.ID))
 
@@ -78,13 +84,7 @@ func TestSeasonStore_DesignateCurrent_TransfersDesignation(t *testing.T) {
 
 // TestSeasonStore_DesignateCurrent_ExactlyOneCurrent verifies the exactly-one invariant (AC-M2).
 func TestSeasonStore_DesignateCurrent_ExactlyOneCurrent(t *testing.T) {
-	truncateAll(t)
-	store := SeasonStore{}
-
-	s1 := &Season{Label: "2024-2025", StartDate: s24Start, EndDate: s24End, IsCurrent: true}
-	s2 := &Season{Label: "2025-2026", StartDate: s25Start, EndDate: s25End}
-	require.NoError(t, DB.Create(s1))
-	require.NoError(t, DB.Create(s2))
+	store, _, s2 := seedTwoSeasons(t)
 
 	require.NoError(t, store.DesignateCurrent(DB, s2.ID))
 
@@ -98,13 +98,7 @@ func TestSeasonStore_DesignateCurrent_ExactlyOneCurrent(t *testing.T) {
 // TestSeasonStore_DesignateCurrent_Idempotent verifies that multiple sequential calls
 // leave exactly one current season at the end (AC-M3).
 func TestSeasonStore_DesignateCurrent_Idempotent(t *testing.T) {
-	truncateAll(t)
-	store := SeasonStore{}
-
-	s1 := &Season{Label: "2024-2025", StartDate: s24Start, EndDate: s24End, IsCurrent: true}
-	s2 := &Season{Label: "2025-2026", StartDate: s25Start, EndDate: s25End}
-	require.NoError(t, DB.Create(s1))
-	require.NoError(t, DB.Create(s2))
+	store, s1, s2 := seedTwoSeasons(t)
 
 	require.NoError(t, store.DesignateCurrent(DB, s2.ID))
 	require.NoError(t, store.DesignateCurrent(DB, s1.ID))

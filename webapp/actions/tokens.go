@@ -16,16 +16,25 @@ type TokensHandler struct {
 	DB       *pop.Connection            // nil in unit tests; used by Sessions.BindAccount
 }
 
-// InviteForm renders the invite form for a valid token, or the invalid-token page.
-func (h TokensHandler) InviteForm(c buffalo.Context) error {
-	token := c.Param("token")
-	tx := c.Value("tx").(*pop.Connection)
-
-	ctx, err := h.Accounts.ValidateInviteToken(tx, token)
+// validateInvite validates the invite token from the request and returns the token string,
+// transaction, and invite context. Returns a rendered response error on invalid token.
+func (h TokensHandler) validateInvite(c buffalo.Context) (token string, tx *pop.Connection, ctx *services.InviteContextDTO, err error) {
+	token = c.Param("token")
+	tx = c.Value("tx").(*pop.Connection)
+	ctx, err = h.Accounts.ValidateInviteToken(tx, token)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidToken) {
-			return c.Render(http.StatusOK, r.HTML("tokens/invite_invalid.plush.html"))
+			return "", nil, nil, c.Render(http.StatusOK, r.HTML("tokens/invite_invalid.plush.html"))
 		}
+		return "", nil, nil, err
+	}
+	return token, tx, ctx, nil
+}
+
+// InviteForm renders the invite form for a valid token, or the invalid-token page.
+func (h TokensHandler) InviteForm(c buffalo.Context) error {
+	token, _, ctx, err := h.validateInvite(c)
+	if err != nil {
 		return err
 	}
 	c.Set("invite", ctx)
@@ -36,14 +45,8 @@ func (h TokensHandler) InviteForm(c buffalo.Context) error {
 
 // InviteSubmit processes the invite form POST.
 func (h TokensHandler) InviteSubmit(c buffalo.Context) error {
-	token := c.Param("token")
-	tx := c.Value("tx").(*pop.Connection)
-
-	ctx, err := h.Accounts.ValidateInviteToken(tx, token)
+	token, tx, ctx, err := h.validateInvite(c)
 	if err != nil {
-		if errors.Is(err, services.ErrInvalidToken) {
-			return c.Render(http.StatusOK, r.HTML("tokens/invite_invalid.plush.html"))
-		}
 		return err
 	}
 

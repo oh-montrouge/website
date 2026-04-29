@@ -2,6 +2,8 @@ package actions
 
 import (
 	"net/http"
+	"net/http/httptest"
+	"testing"
 
 	"ohmontrouge/webapp/locales"
 
@@ -34,4 +36,18 @@ func newTestApp(register func(*buffalo.App)) http.Handler {
 
 	register(a)
 	return a
+}
+
+// serveGET builds a test app with the given middlewares, registers handler at path, and runs a GET.
+func serveGET(t *testing.T, path string, handler buffalo.Handler, mws ...buffalo.MiddlewareFunc) *httptest.ResponseRecorder {
+	t.Helper()
+	app := newTestApp(func(a *buffalo.App) {
+		for _, mw := range mws {
+			a.Use(mw)
+		}
+		a.GET(path, handler)
+	})
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, path, nil))
+	return res
 }

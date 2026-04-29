@@ -43,16 +43,22 @@ func (h MusiciansHandler) New(c buffalo.Context) error {
 	return c.Render(http.StatusOK, r.HTML("admin/musicians/new.plush.html"))
 }
 
+// parseMusicianFormValues extracts the shared musician form fields from the request.
+func parseMusicianFormValues(c buffalo.Context) (firstName, lastName, email, instrumentIDStr, birthDateStr, parentalConsentURI string) {
+	req := c.Request()
+	firstName = req.FormValue("first_name")
+	lastName = req.FormValue("last_name")
+	email = req.FormValue("email")
+	instrumentIDStr = req.FormValue("main_instrument_id")
+	birthDateStr = req.FormValue("birth_date")
+	parentalConsentURI = req.FormValue("parental_consent_uri")
+	return
+}
+
 func (h MusiciansHandler) Create(c buffalo.Context) error {
 	tx := c.Value("tx").(*pop.Connection)
 
-	req := c.Request()
-	firstName := req.FormValue("first_name")
-	lastName := req.FormValue("last_name")
-	email := req.FormValue("email")
-	instrumentIDStr := req.FormValue("main_instrument_id")
-	birthDateStr := req.FormValue("birth_date")
-	parentalConsentURI := req.FormValue("parental_consent_uri")
+	firstName, lastName, email, instrumentIDStr, birthDateStr, parentalConsentURI := parseMusicianFormValues(c)
 
 	instrumentID, err := strconv.ParseInt(instrumentIDStr, 10, 64)
 	if err != nil {
@@ -84,16 +90,24 @@ func (h MusiciansHandler) Create(c buffalo.Context) error {
 	return c.Redirect(http.StatusSeeOther, "/admin/musiciens/%d", accountID)
 }
 
-func (h MusiciansHandler) Show(c buffalo.Context) error {
+// loadMusicianAccount parses :id and fetches the account, returning 404 on any failure.
+func (h MusiciansHandler) loadMusicianAccount(c buffalo.Context) (*services.AccountDTO, int64, *pop.Connection, error) {
 	tx := c.Value("tx").(*pop.Connection)
 	id, err := parseID(c)
 	if err != nil {
-		return c.Error(http.StatusNotFound, err)
+		return nil, 0, nil, c.Error(http.StatusNotFound, err)
 	}
-
 	account, err := h.Accounts.GetByID(tx, id)
 	if err != nil {
-		return c.Error(http.StatusNotFound, errors.New("musicien introuvable"))
+		return nil, 0, nil, c.Error(http.StatusNotFound, errors.New("musicien introuvable"))
+	}
+	return account, id, tx, nil
+}
+
+func (h MusiciansHandler) Show(c buffalo.Context) error {
+	account, id, tx, err := h.loadMusicianAccount(c)
+	if err != nil {
+		return err
 	}
 
 	profile, err := h.Membership.GetProfile(tx, id)
@@ -149,38 +163,15 @@ func (h MusiciansHandler) Show(c buffalo.Context) error {
 }
 
 func (h MusiciansHandler) Edit(c buffalo.Context) error {
-	tx := c.Value("tx").(*pop.Connection)
-	id, err := parseID(c)
+	account, id, tx, err := h.loadMusicianAccount(c)
 	if err != nil {
-		return c.Error(http.StatusNotFound, err)
-	}
-
-	account, err := h.Accounts.GetByID(tx, id)
-	if err != nil {
-		return c.Error(http.StatusNotFound, errors.New("musicien introuvable"))
+		return err
 	}
 	if account.Status == services.StatusAnonymized {
 		c.Flash().Add("danger", "Les comptes anonymisés ne peuvent pas être modifiés.")
 		return c.Redirect(http.StatusSeeOther, "/admin/musiciens/%d", id)
 	}
-
-	profile, err := h.Membership.GetProfile(tx, id)
-	if err != nil {
-		return err
-	}
-
-	instruments, err := h.Instruments.List(tx)
-	if err != nil {
-		return err
-	}
-
-	c.Set("account", account)
-	c.Set("accountStatus", string(account.Status))
-	c.Set("profile", profile)
-	c.Set("birthDateStr", safeDateInput(profile.BirthDate))
-	c.Set("instruments", instruments)
-	c.Set("formError", "")
-	return c.Render(http.StatusOK, r.HTML("admin/musicians/edit.plush.html"))
+	return h.renderEditForm(c, tx, id, "", http.StatusOK)
 }
 
 func (h MusiciansHandler) Update(c buffalo.Context) error {
@@ -195,37 +186,31 @@ func (h MusiciansHandler) Update(c buffalo.Context) error {
 		return err
 	}
 
-	req := c.Request()
-	firstName := req.FormValue("first_name")
-	lastName := req.FormValue("last_name")
-	email := req.FormValue("email")
-	instrumentIDStr := req.FormValue("main_instrument_id")
-	birthDateStr := req.FormValue("birth_date")
-	parentalConsentURI := req.FormValue("parental_consent_uri")
+	firstName, lastName, email, instrumentIDStr, birthDateStr, parentalConsentURI := parseMusicianFormValues(c)
 
 	instrumentID, err := strconv.ParseInt(instrumentIDStr, 10, 64)
 	if err != nil {
-		return h.renderEditWithError(c, tx, id, "Instrument invalide.")
+		return h.renderEditForm(c, tx, id, "Instrument invalide.", http.StatusUnprocessableEntity)
 	}
 
 	birthDate, err := parseOptionalDate(birthDateStr)
 	if err != nil {
-		return h.renderEditWithError(c, tx, id, "Date de naissance invalide.")
+		return h.renderEditForm(c, tx, id, "Date de naissance invalide.", http.StatusUnprocessableEntity)
 	}
 
 	// Only allow editing phone/address if consent is given
 	phone := profile.Phone
 	address := profile.Address
 	if profile.PhoneAddressConsent {
-		phone = req.FormValue("phone")
-		address = req.FormValue("address")
+		phone = c.Request().FormValue("phone")
+		address = c.Request().FormValue("address")
 	}
 
 	if err := h.Membership.UpdateProfile(tx, id, firstName, lastName, email, instrumentID, birthDate, parentalConsentURI, phone, address); err != nil {
 		if errors.Is(err, services.ErrParentalConsentRequired) {
-			return h.renderEditWithError(c, tx, id, err.Error())
+			return h.renderEditForm(c, tx, id, err.Error(), http.StatusUnprocessableEntity)
 		}
-		return h.renderEditWithError(c, tx, id, "Erreur lors de la mise à jour : "+err.Error())
+		return h.renderEditForm(c, tx, id, "Erreur lors de la mise à jour : "+err.Error(), http.StatusUnprocessableEntity)
 	}
 
 	c.Flash().Add("success", "Profil mis à jour.")
@@ -380,7 +365,7 @@ func (h MusiciansHandler) renderNewWithError(c buffalo.Context, tx *pop.Connecti
 	return c.Render(http.StatusUnprocessableEntity, r.HTML("admin/musicians/new.plush.html"))
 }
 
-func (h MusiciansHandler) renderEditWithError(c buffalo.Context, tx *pop.Connection, id int64, msg string) error {
+func (h MusiciansHandler) renderEditForm(c buffalo.Context, tx *pop.Connection, id int64, msg string, status int) error {
 	account, err := h.Accounts.GetByID(tx, id)
 	if err != nil {
 		return err
@@ -399,7 +384,7 @@ func (h MusiciansHandler) renderEditWithError(c buffalo.Context, tx *pop.Connect
 	c.Set("birthDateStr", safeDateInput(profile.BirthDate))
 	c.Set("instruments", instruments)
 	c.Set("formError", msg)
-	return c.Render(http.StatusUnprocessableEntity, r.HTML("admin/musicians/edit.plush.html"))
+	return c.Render(status, r.HTML("admin/musicians/edit.plush.html"))
 }
 
 // safeDateStr formats a date for display (DD/MM/YYYY).

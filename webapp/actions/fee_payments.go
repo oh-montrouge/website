@@ -72,22 +72,29 @@ func (h FeePaymentsHandler) Create(c buffalo.Context) error {
 	return c.Redirect(http.StatusSeeOther, "/admin/musiciens/%d", accountID)
 }
 
-// EditForm renders the fee payment edit form.
-func (h FeePaymentsHandler) EditForm(c buffalo.Context) error {
+// loadFeePayment parses the :id param, fetches the payment, and returns 404 on failure.
+func loadFeePayment(c buffalo.Context, fp services.FeePaymentManager) (*services.FeePaymentDTO, *pop.Connection, error) {
 	id, err := parseID(c)
 	if err != nil {
-		return c.Error(http.StatusNotFound, err)
+		return nil, nil, c.Error(http.StatusNotFound, err)
 	}
-
 	tx := c.Value("tx").(*pop.Connection)
-	payment, err := h.FeePayments.GetByID(tx, id)
+	payment, err := fp.GetByID(tx, id)
 	if err != nil {
 		if errors.Is(err, services.ErrFeePaymentNotFound) {
-			return c.Error(http.StatusNotFound, err)
+			return nil, nil, c.Error(http.StatusNotFound, err)
 		}
+		return nil, nil, err
+	}
+	return payment, tx, nil
+}
+
+// EditForm renders the fee payment edit form.
+func (h FeePaymentsHandler) EditForm(c buffalo.Context) error {
+	payment, _, err := loadFeePayment(c, h.FeePayments)
+	if err != nil {
 		return err
 	}
-
 	c.Set("payment", payment)
 	c.Set("formError", "")
 	return c.Render(http.StatusOK, r.HTML("admin/cotisations/edit.plush.html"))
@@ -95,17 +102,8 @@ func (h FeePaymentsHandler) EditForm(c buffalo.Context) error {
 
 // Update saves edits to a fee payment.
 func (h FeePaymentsHandler) Update(c buffalo.Context) error {
-	id, err := parseID(c)
+	payment, tx, err := loadFeePayment(c, h.FeePayments)
 	if err != nil {
-		return c.Error(http.StatusNotFound, err)
-	}
-
-	tx := c.Value("tx").(*pop.Connection)
-	payment, err := h.FeePayments.GetByID(tx, id)
-	if err != nil {
-		if errors.Is(err, services.ErrFeePaymentNotFound) {
-			return c.Error(http.StatusNotFound, err)
-		}
 		return err
 	}
 
@@ -134,7 +132,7 @@ func (h FeePaymentsHandler) Update(c buffalo.Context) error {
 		return c.Render(http.StatusUnprocessableEntity, r.HTML("admin/cotisations/edit.plush.html"))
 	}
 
-	if err := h.FeePayments.Update(tx, id, amount, paymentDate, paymentType, comment); err != nil {
+	if err := h.FeePayments.Update(tx, payment.ID, amount, paymentDate, paymentType, comment); err != nil {
 		return err
 	}
 
@@ -144,21 +142,12 @@ func (h FeePaymentsHandler) Update(c buffalo.Context) error {
 
 // Delete removes a fee payment.
 func (h FeePaymentsHandler) Delete(c buffalo.Context) error {
-	id, err := parseID(c)
+	payment, tx, err := loadFeePayment(c, h.FeePayments)
 	if err != nil {
-		return c.Error(http.StatusNotFound, err)
-	}
-
-	tx := c.Value("tx").(*pop.Connection)
-	payment, err := h.FeePayments.GetByID(tx, id)
-	if err != nil {
-		if errors.Is(err, services.ErrFeePaymentNotFound) {
-			return c.Error(http.StatusNotFound, err)
-		}
 		return err
 	}
 
-	if err := h.FeePayments.Delete(tx, id); err != nil {
+	if err := h.FeePayments.Delete(tx, payment.ID); err != nil {
 		return err
 	}
 
