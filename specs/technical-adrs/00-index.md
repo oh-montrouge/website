@@ -24,6 +24,8 @@ A technical ADR may supersede a functional one when a technical constraint requi
 | [006](006-backup-strategy.md) | Database Backup Strategy | Accepted |
 | [007](007-account-musician-dtos.md) | Two-DTO Pattern: AccountDTO and MusicianProfile | Accepted |
 | [008](008-frontend-interactivity.md) | Frontend Interactivity: Alpine.js | Accepted |
+| [009](009-markdown-rendering.md) | Markdown Rendering: goldmark | Accepted |
+| [010](010-e2e-framework.md) | E2e Framework: Playwright (TypeScript) | Accepted |
 
 ## Open Decisions
 

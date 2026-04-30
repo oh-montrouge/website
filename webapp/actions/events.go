@@ -48,6 +48,18 @@ func (h EventsHandler) Index(c buffalo.Context) error {
 	return c.Render(http.StatusOK, r.HTML("events/index.plush.html"))
 }
 
+// loadEventDetail fetches an event detail by id, returning 404 on not found.
+func (h EventsHandler) loadEventDetail(c buffalo.Context, tx *pop.Connection, id, accountID int64) (*services.EventDetailDTO, error) {
+	detail, err := h.Events.GetDetail(tx, id, accountID)
+	if err != nil {
+		if errors.Is(err, services.ErrEventNotFound) {
+			return nil, c.Error(http.StatusNotFound, err)
+		}
+		return nil, err
+	}
+	return detail, nil
+}
+
 // Show renders /evenements/{id} — event detail with full RSVP list.
 func (h EventsHandler) Show(c buffalo.Context) error {
 	id, err := parseID(c)
@@ -57,11 +69,8 @@ func (h EventsHandler) Show(c buffalo.Context) error {
 	account := c.Value("current_account").(*services.AccountDTO)
 	tx := c.Value("tx").(*pop.Connection)
 
-	detail, err := h.Events.GetDetail(tx, id, account.ID)
+	detail, err := h.loadEventDetail(c, tx, id, account.ID)
 	if err != nil {
-		if errors.Is(err, services.ErrEventNotFound) {
-			return c.Error(http.StatusNotFound, err)
-		}
 		return err
 	}
 
@@ -179,11 +188,8 @@ func (h EventsHandler) Edit(c buffalo.Context) error {
 	tx := c.Value("tx").(*pop.Connection)
 	account := c.Value("current_account").(*services.AccountDTO)
 
-	detail, err := h.Events.GetDetail(tx, id, account.ID)
+	detail, err := h.loadEventDetail(c, tx, id, account.ID)
 	if err != nil {
-		if errors.Is(err, services.ErrEventNotFound) {
-			return c.Error(http.StatusNotFound, err)
-		}
 		return err
 	}
 
@@ -259,13 +265,7 @@ func (h EventsHandler) AddField(c buffalo.Context) error {
 		return c.Error(http.StatusBadRequest, err)
 	}
 
-	label := strings.TrimSpace(c.Request().FormValue("label"))
-	fieldType := strings.TrimSpace(c.Request().FormValue("field_type"))
-	required := c.Request().FormValue("required") == "true"
-	positionStr := c.Request().FormValue("position")
-	position, _ := strconv.Atoi(positionStr)
-
-	choices := parseChoices(c)
+	label, fieldType, required, position, choices := parseFieldFormValues(c)
 
 	tx := c.Value("tx").(*pop.Connection)
 	if err := h.Events.AddField(tx, id, label, fieldType, required, position, choices); err != nil {
@@ -307,21 +307,12 @@ func (h EventsHandler) EditFieldForm(c buffalo.Context) error {
 
 // UpdateField handles PUT /admin/evenements/{event_id}/champs/{field_id}.
 func (h EventsHandler) UpdateField(c buffalo.Context) error {
-	fieldID, err := strconv.ParseInt(c.Param("field_id"), 10, 64)
+	fieldID, eventID, err := parseFieldAndEventIDs(c)
 	if err != nil {
-		return c.Error(http.StatusBadRequest, err)
-	}
-	eventID, err := parseID(c)
-	if err != nil {
-		return c.Error(http.StatusBadRequest, err)
+		return err
 	}
 
-	label := strings.TrimSpace(c.Request().FormValue("label"))
-	fieldType := strings.TrimSpace(c.Request().FormValue("field_type"))
-	required := c.Request().FormValue("required") == "true"
-	positionStr := c.Request().FormValue("position")
-	position, _ := strconv.Atoi(positionStr)
-	choices := parseChoices(c)
+	label, fieldType, required, position, choices := parseFieldFormValues(c)
 
 	tx := c.Value("tx").(*pop.Connection)
 	if err := h.Events.UpdateField(tx, fieldID, label, fieldType, required, position, choices); err != nil {
@@ -338,13 +329,9 @@ func (h EventsHandler) UpdateField(c buffalo.Context) error {
 
 // DeleteField handles DELETE /admin/evenements/{event_id}/champs/{field_id}.
 func (h EventsHandler) DeleteField(c buffalo.Context) error {
-	fieldID, err := strconv.ParseInt(c.Param("field_id"), 10, 64)
+	fieldID, eventID, err := parseFieldAndEventIDs(c)
 	if err != nil {
-		return c.Error(http.StatusBadRequest, err)
-	}
-	eventID, err := parseID(c)
-	if err != nil {
-		return c.Error(http.StatusBadRequest, err)
+		return err
 	}
 
 	tx := c.Value("tx").(*pop.Connection)
@@ -406,6 +393,30 @@ func (h EventsHandler) AdminUpdateRSVP(c buffalo.Context) error {
 }
 
 // --- helpers ---
+
+// parseFieldAndEventIDs extracts field_id and the route :id from the request.
+func parseFieldAndEventIDs(c buffalo.Context) (fieldID, eventID int64, err error) {
+	fieldID, err = strconv.ParseInt(c.Param("field_id"), 10, 64)
+	if err != nil {
+		return 0, 0, c.Error(http.StatusBadRequest, err)
+	}
+	eventID, err = parseID(c)
+	if err != nil {
+		return 0, 0, c.Error(http.StatusBadRequest, err)
+	}
+	return fieldID, eventID, nil
+}
+
+// parseFieldFormValues extracts the shared field form fields from the request.
+func parseFieldFormValues(c buffalo.Context) (label, fieldType string, required bool, position int, choices []services.FieldChoiceInput) {
+	label = strings.TrimSpace(c.Request().FormValue("label"))
+	fieldType = strings.TrimSpace(c.Request().FormValue("field_type"))
+	required = c.Request().FormValue("required") == "true"
+	positionStr := c.Request().FormValue("position")
+	position, _ = strconv.Atoi(positionStr)
+	choices = parseChoices(c)
+	return
+}
 
 func parseEventForm(c buffalo.Context) (name, dateStr, timeStr, eventType, formErr string) {
 	name = strings.TrimSpace(c.Request().FormValue("name"))

@@ -119,138 +119,100 @@ func (s *stubAccountRepoFull) AnonymizeAccount(_ *pop.Connection, _ int64, _ str
 	return s.anonymizeErr
 }
 
-// --- AC-M3: Last-admin protection on RevokeAdmin (tested via AccountService) ---
-
-func TestRevokeAdmin_LastAdmin_ReturnsError(t *testing.T) {
-	roles := &stubRoleRepoFull{hasRole: true, adminCount: 1}
-	svc := services.AccountService{
+// newRevokeAdminService creates an AccountService for RevokeAdmin unit tests.
+// Only Accounts and Roles vary; InviteTokens and ResetTokens use no-op stubs.
+func newRevokeAdminService(roles *stubRoleRepoFull) services.AccountService {
+	return services.AccountService{
 		Accounts:     &stubAccountRepoFull{},
 		Roles:        roles,
 		InviteTokens: &stubInviteTokenRepo{},
 		ResetTokens:  &stubResetTokenRepo{},
 	}
-	err := svc.RevokeAdmin(nil, 42)
+}
+
+// complianceDeps holds all deps for ComplianceService tests with accessible references.
+type complianceDeps struct {
+	accounts   *stubAccountRepoFull
+	roles      *stubRoleRepoFull
+	membership *stubMembershipRepo
+	invites    *stubInviteTokenRepo
+	resets     *stubResetTokenRepo
+	sessions   *stubSessionRepo
+}
+
+func (d *complianceDeps) service() services.ComplianceService {
+	return services.ComplianceService{
+		Accounts:     d.accounts,
+		Membership:   d.membership,
+		Roles:        d.roles,
+		InviteTokens: d.invites,
+		ResetTokens:  d.resets,
+		Sessions:     d.sessions,
+	}
+}
+
+func newComplianceDeps(accounts *stubAccountRepoFull, roles *stubRoleRepoFull) *complianceDeps {
+	return &complianceDeps{
+		accounts:   accounts,
+		roles:      roles,
+		membership: &stubMembershipRepo{},
+		invites:    &stubInviteTokenRepo{},
+		resets:     &stubResetTokenRepo{},
+		sessions:   &stubSessionRepo{},
+	}
+}
+
+// --- AC-M3: Last-admin protection on RevokeAdmin (tested via AccountService) ---
+
+func TestRevokeAdmin_LastAdmin_ReturnsError(t *testing.T) {
+	err := newRevokeAdminService(&stubRoleRepoFull{hasRole: true, adminCount: 1}).RevokeAdmin(nil, 42)
 	assert.ErrorIs(t, err, services.ErrLastAdmin)
 }
 
 func TestRevokeAdmin_NotLastAdmin_Succeeds(t *testing.T) {
-	roles := &stubRoleRepoFull{hasRole: true, adminCount: 2, roleID: 1}
-	svc := services.AccountService{
-		Accounts:     &stubAccountRepoFull{},
-		Roles:        roles,
-		InviteTokens: &stubInviteTokenRepo{},
-		ResetTokens:  &stubResetTokenRepo{},
-	}
-	err := svc.RevokeAdmin(nil, 42)
+	err := newRevokeAdminService(&stubRoleRepoFull{hasRole: true, adminCount: 2, roleID: 1}).RevokeAdmin(nil, 42)
 	assert.NoError(t, err)
 }
 
 func TestRevokeAdmin_NotAdmin_IsIdempotent(t *testing.T) {
-	roles := &stubRoleRepoFull{hasRole: false}
-	svc := services.AccountService{
-		Accounts:     &stubAccountRepoFull{},
-		Roles:        roles,
-		InviteTokens: &stubInviteTokenRepo{},
-		ResetTokens:  &stubResetTokenRepo{},
-	}
-	err := svc.RevokeAdmin(nil, 42)
+	err := newRevokeAdminService(&stubRoleRepoFull{hasRole: false}).RevokeAdmin(nil, 42)
 	assert.NoError(t, err)
 }
 
 // --- AC-M4: Last-admin protection on Anonymize ---
 
 func TestAnonymize_LastAdmin_ReturnsError(t *testing.T) {
-	accounts := &stubAccountRepoFull{}
-	roles := &stubRoleRepoFull{hasRole: true, adminCount: 1}
-	membership := &stubMembershipRepo{}
-	invites := &stubInviteTokenRepo{}
-	resets := &stubResetTokenRepo{}
-	sessions := &stubSessionRepo{}
-
-	svc := services.ComplianceService{
-		Accounts:     accounts,
-		Membership:   membership,
-		Roles:        roles,
-		InviteTokens: invites,
-		ResetTokens:  resets,
-		Sessions:     sessions,
-	}
-
-	err := svc.Anonymize(nil, 42)
+	deps := newComplianceDeps(&stubAccountRepoFull{}, &stubRoleRepoFull{hasRole: true, adminCount: 1})
+	err := deps.service().Anonymize(nil, 42)
 	assert.ErrorIs(t, err, services.ErrLastAdmin)
-	assert.False(t, accounts.anonymizeCalled, "AnonymizeAccount must not be called for last admin")
+	assert.False(t, deps.accounts.anonymizeCalled, "AnonymizeAccount must not be called for last admin")
 }
 
 // --- AC-M5: Anonymize correctness — all repos called in correct order ---
 
 func TestAnonymize_NonAdmin_CallsAllReposInOrder(t *testing.T) {
-	accounts := &stubAccountRepoFull{}
-	roles := &stubRoleRepoFull{hasRole: false}
-	membership := &stubMembershipRepo{}
-	invites := &stubInviteTokenRepo{}
-	resets := &stubResetTokenRepo{}
-	sessions := &stubSessionRepo{}
-
-	svc := services.ComplianceService{
-		Accounts:     accounts,
-		Membership:   membership,
-		Roles:        roles,
-		InviteTokens: invites,
-		ResetTokens:  resets,
-		Sessions:     sessions,
-	}
-
-	err := svc.Anonymize(nil, 5)
+	deps := newComplianceDeps(&stubAccountRepoFull{}, &stubRoleRepoFull{hasRole: false})
+	err := deps.service().Anonymize(nil, 5)
 	assert.NoError(t, err)
-	assert.True(t, accounts.anonymizeCalled, "AnonymizeAccount should be called")
-	assert.True(t, roles.removeAllCalled, "RemoveAllRoles should be called")
-	assert.True(t, invites.invalidateCalled, "InviteTokens.InvalidateExisting should be called")
-	assert.True(t, resets.invalidateCalled, "ResetTokens.InvalidateExisting should be called")
-	assert.True(t, sessions.deleteCalled, "Sessions.DeleteByAccount should be called")
+	assert.True(t, deps.accounts.anonymizeCalled, "AnonymizeAccount should be called")
+	assert.True(t, deps.roles.removeAllCalled, "RemoveAllRoles should be called")
+	assert.True(t, deps.invites.invalidateCalled, "InviteTokens.InvalidateExisting should be called")
+	assert.True(t, deps.resets.invalidateCalled, "ResetTokens.InvalidateExisting should be called")
+	assert.True(t, deps.sessions.deleteCalled, "Sessions.DeleteByAccount should be called")
 }
 
 func TestAnonymize_MultipleAdmins_Succeeds(t *testing.T) {
-	accounts := &stubAccountRepoFull{}
-	roles := &stubRoleRepoFull{hasRole: true, adminCount: 2}
-	membership := &stubMembershipRepo{}
-	invites := &stubInviteTokenRepo{}
-	resets := &stubResetTokenRepo{}
-	sessions := &stubSessionRepo{}
-
-	svc := services.ComplianceService{
-		Accounts:     accounts,
-		Membership:   membership,
-		Roles:        roles,
-		InviteTokens: invites,
-		ResetTokens:  resets,
-		Sessions:     sessions,
-	}
-
-	err := svc.Anonymize(nil, 42)
+	deps := newComplianceDeps(&stubAccountRepoFull{}, &stubRoleRepoFull{hasRole: true, adminCount: 2})
+	err := deps.service().Anonymize(nil, 42)
 	assert.NoError(t, err)
-	assert.True(t, accounts.anonymizeCalled)
+	assert.True(t, deps.accounts.anonymizeCalled)
 }
 
 func TestAnonymize_AnonymizeAccountError_StopsChain(t *testing.T) {
-	accounts := &stubAccountRepoFull{anonymizeErr: errors.New("db error")}
-	roles := &stubRoleRepoFull{hasRole: false}
-	membership := &stubMembershipRepo{}
-	invites := &stubInviteTokenRepo{}
-	resets := &stubResetTokenRepo{}
-	sessions := &stubSessionRepo{}
-
-	svc := services.ComplianceService{
-		Accounts:     accounts,
-		Membership:   membership,
-		Roles:        roles,
-		InviteTokens: invites,
-		ResetTokens:  resets,
-		Sessions:     sessions,
-	}
-
-	err := svc.Anonymize(nil, 5)
+	deps := newComplianceDeps(&stubAccountRepoFull{anonymizeErr: errors.New("db error")}, &stubRoleRepoFull{hasRole: false})
+	err := deps.service().Anonymize(nil, 5)
 	assert.Error(t, err)
-	assert.False(t, roles.removeAllCalled, "RemoveAllRoles must not be called if AnonymizeAccount fails")
+	assert.False(t, deps.roles.removeAllCalled, "RemoveAllRoles must not be called if AnonymizeAccount fails")
 }
 
 // --- AC-M7: Anonymize deletes RSVPs ---

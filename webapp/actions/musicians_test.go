@@ -141,22 +141,46 @@ func newMusiciansTestApp(h MusiciansHandler, register func(*buffalo.App, Musicia
 	})
 }
 
+func runMusiciansGET(t *testing.T, h MusiciansHandler, routeTemplate, path string, fn buffalo.Handler) *httptest.ResponseRecorder {
+	t.Helper()
+	app := newMusiciansTestApp(h, func(a *buffalo.App, _ MusiciansHandler) {
+		a.GET(routeTemplate, fn)
+	})
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, path, nil))
+	return res
+}
+
+func runMusiciansPost(t *testing.T, h MusiciansHandler, routeTemplate, path, body string, fn buffalo.Handler) *httptest.ResponseRecorder {
+	t.Helper()
+	app := newMusiciansTestApp(h, func(a *buffalo.App, _ MusiciansHandler) {
+		a.POST(routeTemplate, fn)
+	})
+	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, req)
+	return res
+}
+
+func runMusiciansDelete(t *testing.T, h MusiciansHandler, routeTemplate, path string, fn buffalo.Handler) *httptest.ResponseRecorder {
+	t.Helper()
+	app := newMusiciansTestApp(h, func(a *buffalo.App, _ MusiciansHandler) {
+		a.DELETE(routeTemplate, fn)
+	})
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodDelete, path, nil))
+	return res
+}
+
 // --- Index tests ---
 
 func TestMusiciansHandler_Index_ReturnsList(t *testing.T) {
 	summaries := []services.MusicianProfileSummary{
 		{AccountID: 1, FirstName: "Alice", LastName: "Martin", MainInstrumentName: "Clarinette", Status: "active"},
 	}
-	h := MusiciansHandler{
-		Membership: &stubMusicianProfile{summaries: summaries},
-	}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.GET("/admin/musiciens", h.Index)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/admin/musiciens", nil)
-	app.ServeHTTP(res, req)
+	h := MusiciansHandler{Membership: &stubMusicianProfile{summaries: summaries}}
+	res := serveGET(t, "/admin/musiciens", h.Index)
 
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), "Alice")
@@ -164,16 +188,8 @@ func TestMusiciansHandler_Index_ReturnsList(t *testing.T) {
 }
 
 func TestMusiciansHandler_Index_EmptyList(t *testing.T) {
-	h := MusiciansHandler{
-		Membership: &stubMusicianProfile{summaries: []services.MusicianProfileSummary{}},
-	}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.GET("/admin/musiciens", h.Index)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/admin/musiciens", nil)
-	app.ServeHTTP(res, req)
+	h := MusiciansHandler{Membership: &stubMusicianProfile{summaries: []services.MusicianProfileSummary{}}}
+	res := serveGET(t, "/admin/musiciens", h.Index)
 
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), "Aucun musicien")
@@ -294,32 +310,16 @@ func TestMusiciansHandler_Create_ParentalConsentRequired_ShowsError(t *testing.T
 // --- Delete tests ---
 
 func TestMusiciansHandler_Delete_Pending_Redirects(t *testing.T) {
-	h := MusiciansHandler{
-		Accounts: &stubAccountAdmin{deleteErr: nil},
-	}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.DELETE("/admin/musiciens/{id}", h.Delete)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/admin/musiciens/1", nil)
-	app.ServeHTTP(res, req)
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{deleteErr: nil}}
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}", "/admin/musiciens/1", h.Delete)
 
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Equal(t, "/admin/musiciens", res.Header().Get("Location"))
 }
 
 func TestMusiciansHandler_Delete_NotPending_ShowsFlash(t *testing.T) {
-	h := MusiciansHandler{
-		Accounts: &stubAccountAdmin{deleteErr: services.ErrAccountNotPending},
-	}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.DELETE("/admin/musiciens/{id}", h.Delete)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/admin/musiciens/1", nil)
-	app.ServeHTTP(res, req)
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{deleteErr: services.ErrAccountNotPending}}
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}", "/admin/musiciens/1", h.Delete)
 
 	// Flash and redirect to show page
 	assert.Equal(t, http.StatusSeeOther, res.Code)
@@ -329,38 +329,16 @@ func TestMusiciansHandler_Delete_NotPending_ShowsFlash(t *testing.T) {
 // --- Anonymize tests ---
 
 func TestMusiciansHandler_Anonymize_ConfirmationMissing_DoesNotAnonymize(t *testing.T) {
-	compliance := &stubCompliance{}
-	h := MusiciansHandler{
-		Compliance: compliance,
-	}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.POST("/admin/musiciens/{id}/anonymiser", h.Anonymize)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("confirmed=wrong")
-	req := httptest.NewRequest(http.MethodPost, "/admin/musiciens/1/anonymiser", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
+	h := MusiciansHandler{Compliance: &stubCompliance{}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/anonymiser", "/admin/musiciens/1/anonymiser", "confirmed=wrong", h.Anonymize)
 
 	// Should redirect back with danger flash, not call Anonymize
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 }
 
 func TestMusiciansHandler_Anonymize_WithConfirmation_Succeeds(t *testing.T) {
-	compliance := &stubCompliance{}
-	h := MusiciansHandler{
-		Compliance: compliance,
-	}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.POST("/admin/musiciens/{id}/anonymiser", h.Anonymize)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("confirmed=ANONYMISER")
-	req := httptest.NewRequest(http.MethodPost, "/admin/musiciens/1/anonymiser", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
+	h := MusiciansHandler{Compliance: &stubCompliance{}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/anonymiser", "/admin/musiciens/1/anonymiser", "confirmed=ANONYMISER", h.Anonymize)
 
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")
@@ -382,13 +360,7 @@ func TestMusiciansHandler_Edit_RendersForm(t *testing.T) {
 		Membership:  &stubMusicianProfile{profile: profile},
 		Instruments: &stubInstruments{instruments: defaultInstruments()},
 	}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.GET("/admin/musiciens/{id}/modifier", h.Edit)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/admin/musiciens/1/modifier", nil)
-	app.ServeHTTP(res, req)
+	res := runMusiciansGET(t, h, "/admin/musiciens/{id}/modifier", "/admin/musiciens/1/modifier", h.Edit)
 
 	assert.Equal(t, http.StatusOK, res.Code)
 	body := res.Body.String()
@@ -399,16 +371,8 @@ func TestMusiciansHandler_Edit_RendersForm(t *testing.T) {
 
 func TestMusiciansHandler_Edit_AnonymizedAccount_Redirects(t *testing.T) {
 	account := &services.AccountDTO{ID: 1, Email: "", Status: services.StatusAnonymized}
-	h := MusiciansHandler{
-		Accounts: &stubAccountAdmin{account: account},
-	}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.GET("/admin/musiciens/{id}/modifier", h.Edit)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/admin/musiciens/1/modifier", nil)
-	app.ServeHTTP(res, req)
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{account: account}}
+	res := runMusiciansGET(t, h, "/admin/musiciens/{id}/modifier", "/admin/musiciens/1/modifier", h.Edit)
 
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")
@@ -545,13 +509,7 @@ func TestMusiciansHandler_GenerateInviteLink_Success_Redirects(t *testing.T) {
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 	}
 	h := MusiciansHandler{Accounts: &stubAccountAdmin{inviteToken: inviteToken}}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.POST("/admin/musiciens/{id}/invitation", h.GenerateInviteLink)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/admin/musiciens/1/invitation", nil)
-	app.ServeHTTP(res, req)
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/invitation", "/admin/musiciens/1/invitation", "", h.GenerateInviteLink)
 
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")
@@ -564,13 +522,7 @@ func TestMusiciansHandler_GenerateResetLink_Success_Redirects(t *testing.T) {
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 	}
 	h := MusiciansHandler{Accounts: &stubAccountAdmin{resetToken: resetToken}}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.POST("/admin/musiciens/{id}/reinitialisation", h.GenerateResetLink)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/admin/musiciens/1/reinitialisation", nil)
-	app.ServeHTTP(res, req)
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/reinitialisation", "/admin/musiciens/1/reinitialisation", "", h.GenerateResetLink)
 
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")

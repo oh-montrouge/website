@@ -55,6 +55,24 @@ Every implementation task touching `webapp/templates/` or `webapp/public/assets/
 
 ---
 
+## jscpd Suppression Convention — Tier 2
+
+`jscpd:ignore-start` / `jscpd:ignore-end` markers (Go: `// jscpd:ignore-start`, templates:
+`{{/* jscpd:ignore-start */}}`) may only be added when one of the following inline comments
+immediately precedes the marker:
+
+```
+// jscpd: unwanted abstraction — [brief rationale]
+// jscpd: unclear ownership — [brief rationale]
+```
+
+`unclear ownership` suppressions additionally require a `TECH_DEBT.md` entry with a payback
+trigger (who/what will resolve the duplication and when).
+
+Suppressions without a preceding comment are incomplete and must be fixed before merging.
+
+---
+
 # Design references
 
 Some plans may refer to a design (wireframes). Those are guidelines, not hard constraints. If the implementation sounds too complexe, stop and ask.

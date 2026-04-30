@@ -448,12 +448,21 @@ func (s AccountService) DeletePending(tx *pop.Connection, accountID int64) error
 	if AccountStatus(account.Status) != StatusPending {
 		return ErrAccountNotPending
 	}
-	isAdmin, err := s.Roles.HasRole(tx, accountID, RoleAdmin)
+	if err := checkLastAdmin(tx, s.Roles, accountID); err != nil {
+		return err
+	}
+	return s.Accounts.Delete(tx, accountID)
+}
+
+// checkLastAdmin returns ErrLastAdmin if accountID is the sole active admin.
+// Safe to call for non-admin accounts — returns nil immediately.
+func checkLastAdmin(tx *pop.Connection, roles RoleRepository, accountID int64) error {
+	isAdmin, err := roles.HasRole(tx, accountID, RoleAdmin)
 	if err != nil {
 		return err
 	}
 	if isAdmin {
-		count, err := s.Roles.CountActiveAdmins(tx)
+		count, err := roles.CountActiveAdmins(tx)
 		if err != nil {
 			return err
 		}
@@ -461,7 +470,7 @@ func (s AccountService) DeletePending(tx *pop.Connection, accountID int64) error
 			return ErrLastAdmin
 		}
 	}
-	return s.Accounts.Delete(tx, accountID)
+	return nil
 }
 
 func toAccountDTO(a *models.Account) *AccountDTO {

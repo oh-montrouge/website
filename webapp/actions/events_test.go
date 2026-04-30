@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -123,82 +124,99 @@ func defaultAccount() *services.AccountDTO {
 	return &services.AccountDTO{ID: 1, Email: "alice@ohm.test", Status: services.StatusActive}
 }
 
-// --- Dashboard ---
-
-func TestEventsHandler_Dashboard_RendersList(t *testing.T) {
-	h := EventsHandler{
-		Events: &stubEventManager{summaries: []services.EventSummaryDTO{
-			{ID: 1, Name: "Répétition de mai", EventType: "rehearsal", Datetime: time.Now().Add(7 * 24 * time.Hour), RSVPState: "yes"},
-		}},
+// newEventsHandler creates an EventsHandler with the given Events service and empty default stubs.
+func newEventsHandler(events *stubEventManager) EventsHandler {
+	return EventsHandler{
+		Events:      events,
 		Instruments: stubInstrumentRepoE{},
 		Membership:  &stubMusicianProfileMgrE{},
 	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.GET("/tableau-de-bord", h.Dashboard)
+}
+
+// runEventsGET builds the test app, registers handler at routeTemplate, and runs a GET to path.
+func runEventsGET(h EventsHandler, isAdmin bool, routeTemplate, path string, fn buffalo.Handler) *httptest.ResponseRecorder {
+	app := newEventsTestApp(h, defaultAccount(), isAdmin, func(a *buffalo.App) {
+		a.GET(routeTemplate, fn)
 	})
-
 	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/tableau-de-bord", nil)
-	app.ServeHTTP(res, req)
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, path, nil))
+	return res
+}
 
+// runEventsPost builds the test app, registers handler at routeTemplate, and POSTs body to path.
+func runEventsPost(h EventsHandler, isAdmin bool, routeTemplate, path, body string, fn buffalo.Handler) *httptest.ResponseRecorder {
+	app := newEventsTestApp(h, defaultAccount(), isAdmin, func(a *buffalo.App) {
+		a.POST(routeTemplate, fn)
+	})
+	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, req)
+	return res
+}
+
+// runEventsDelete builds the test app, registers handler at routeTemplate, and sends DELETE to path.
+func runEventsDelete(h EventsHandler, isAdmin bool, routeTemplate, path, body string, fn buffalo.Handler) *httptest.ResponseRecorder {
+	app := newEventsTestApp(h, defaultAccount(), isAdmin, func(a *buffalo.App) {
+		a.DELETE(routeTemplate, fn)
+	})
+	var bodyReader io.Reader
+	if body != "" {
+		bodyReader = strings.NewReader(body)
+	}
+	req := httptest.NewRequest(http.MethodDelete, path, bodyReader)
+	if body != "" {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, req)
+	return res
+}
+
+// runEventsJSON builds the test app, registers a PATCH handler, and sends JSON payload to path.
+func runEventsJSON(h EventsHandler, isAdmin bool, routeTemplate, path string, payload []byte, fn buffalo.Handler) *httptest.ResponseRecorder {
+	app := newEventsTestApp(h, defaultAccount(), isAdmin, func(a *buffalo.App) {
+		a.PATCH(routeTemplate, fn)
+	})
+	req := httptest.NewRequest(http.MethodPatch, path, bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, req)
+	return res
+}
+
+// --- Dashboard ---
+
+func TestEventsHandler_Dashboard_RendersList(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{summaries: []services.EventSummaryDTO{
+		{ID: 1, Name: "Répétition de mai", EventType: "rehearsal", Datetime: time.Now().Add(7 * 24 * time.Hour), RSVPState: "yes"},
+	}})
+	res := runEventsGET(h, false, "/tableau-de-bord", "/tableau-de-bord", h.Dashboard)
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), "Répétition de mai")
 	assert.Contains(t, res.Body.String(), "Tableau de bord")
 }
 
 func TestEventsHandler_Dashboard_Empty(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{summaries: []services.EventSummaryDTO{}},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.GET("/tableau-de-bord", h.Dashboard)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/tableau-de-bord", nil)
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{summaries: []services.EventSummaryDTO{}})
+	res := runEventsGET(h, false, "/tableau-de-bord", "/tableau-de-bord", h.Dashboard)
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), "Aucun événement")
 }
 
 func TestEventsHandler_Dashboard_ServiceError(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{listErr: errors.New("db error")},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.GET("/tableau-de-bord", h.Dashboard)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/tableau-de-bord", nil)
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{listErr: errors.New("db error")})
+	res := runEventsGET(h, false, "/tableau-de-bord", "/tableau-de-bord", h.Dashboard)
 	assert.Equal(t, http.StatusInternalServerError, res.Code)
 }
 
 // --- Index ---
 
 func TestEventsHandler_Index_RendersList(t *testing.T) {
-	h := EventsHandler{
-		Events: &stubEventManager{summaries: []services.EventSummaryDTO{
-			{ID: 2, Name: "Concert de printemps", EventType: "concert", Datetime: time.Now().Add(30 * 24 * time.Hour), RSVPState: "unanswered"},
-		}},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.GET("/evenements", h.Index)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/evenements", nil)
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{summaries: []services.EventSummaryDTO{
+		{ID: 2, Name: "Concert de printemps", EventType: "concert", Datetime: time.Now().Add(30 * 24 * time.Hour), RSVPState: "unanswered"},
+	}})
+	res := runEventsGET(h, false, "/evenements", "/evenements", h.Index)
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), "Concert de printemps")
 }
@@ -206,159 +224,64 @@ func TestEventsHandler_Index_RendersList(t *testing.T) {
 // --- Show ---
 
 func TestEventsHandler_Show_RendersDetail(t *testing.T) {
-	h := EventsHandler{
-		Events: &stubEventManager{detail: &services.EventDetailDTO{
-			ID:        1,
-			Name:      "Concert de printemps",
-			EventType: "concert",
-			Datetime:  time.Now().Add(30 * 24 * time.Hour),
-			OwnRSVP:   &services.OwnRSVPDTO{ID: 10, State: "unanswered"},
-		}},
-		Instruments: stubInstrumentRepoE{instruments: models.Instruments{{ID: 1, Name: "Clarinette"}}},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.GET("/evenements/{id}", h.Show)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/evenements/1", nil)
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{detail: &services.EventDetailDTO{
+		ID:        1,
+		Name:      "Concert de printemps",
+		EventType: "concert",
+		Datetime:  time.Now().Add(30 * 24 * time.Hour),
+		OwnRSVP:   &services.OwnRSVPDTO{ID: 10, State: "unanswered"},
+	}})
+	h.Instruments = stubInstrumentRepoE{instruments: models.Instruments{{ID: 1, Name: "Clarinette"}}}
+	res := runEventsGET(h, false, "/evenements/{id}", "/evenements/1", h.Show)
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), "Concert de printemps")
 	assert.Contains(t, res.Body.String(), "Ma participation")
 }
 
 func TestEventsHandler_Show_NotFound(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{detailErr: services.ErrEventNotFound},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.GET("/evenements/{id}", h.Show)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/evenements/99", nil)
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{detailErr: services.ErrEventNotFound})
+	res := runEventsGET(h, false, "/evenements/{id}", "/evenements/99", h.Show)
 	assert.Equal(t, http.StatusNotFound, res.Code)
 }
 
 func TestEventsHandler_Show_InvalidID(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.GET("/evenements/{id}", h.Show)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/evenements/not-a-number", nil)
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsGET(h, false, "/evenements/{id}", "/evenements/not-a-number", h.Show)
 	assert.Equal(t, http.StatusNotFound, res.Code)
 }
 
 // --- UpdateRSVP ---
 
 func TestEventsHandler_UpdateRSVP_Success(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.POST("/evenements/{id}/rsvp", h.UpdateRSVP)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("state=yes&instrument_id=1")
-	req := httptest.NewRequest(http.MethodPost, "/evenements/1/rsvp", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, false, "/evenements/{id}/rsvp", "/evenements/1/rsvp", "state=yes&instrument_id=1", h.UpdateRSVP)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Equal(t, "/evenements/1", res.Header().Get("Location"))
 }
 
 func TestEventsHandler_UpdateRSVP_EmptyState(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.POST("/evenements/{id}/rsvp", h.UpdateRSVP)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("state=")
-	req := httptest.NewRequest(http.MethodPost, "/evenements/1/rsvp", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, false, "/evenements/{id}/rsvp", "/evenements/1/rsvp", "state=", h.UpdateRSVP)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 }
 
 func TestEventsHandler_UpdateRSVP_ServiceError(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{rsvpErr: errors.New("db error")},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.POST("/evenements/{id}/rsvp", h.UpdateRSVP)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("state=yes")
-	req := httptest.NewRequest(http.MethodPost, "/evenements/1/rsvp", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{rsvpErr: errors.New("db error")})
+	res := runEventsPost(h, false, "/evenements/{id}/rsvp", "/evenements/1/rsvp", "state=yes", h.UpdateRSVP)
 	assert.Equal(t, http.StatusInternalServerError, res.Code)
 }
 
 func TestEventsHandler_UpdateRSVP_InstrumentRequired(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{rsvpErr: services.ErrInstrumentRequired},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), false, func(a *buffalo.App) {
-		a.POST("/evenements/{id}/rsvp", h.UpdateRSVP)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("state=yes")
-	req := httptest.NewRequest(http.MethodPost, "/evenements/1/rsvp", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{rsvpErr: services.ErrInstrumentRequired})
+	res := runEventsPost(h, false, "/evenements/{id}/rsvp", "/evenements/1/rsvp", "state=yes", h.UpdateRSVP)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 }
 
 // --- New ---
 
 func TestEventsHandler_New_RendersForm(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.GET("/admin/evenements/nouveau", h.New)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/admin/evenements/nouveau", nil)
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsGET(h, true, "/admin/evenements/nouveau", "/admin/evenements/nouveau", h.New)
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), "Nouvel événement")
 }
@@ -366,216 +289,84 @@ func TestEventsHandler_New_RendersForm(t *testing.T) {
 // --- Create ---
 
 func TestEventsHandler_Create_Success(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.POST("/admin/evenements", h.Create)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("name=Concert+de+printemps&date=2026-06-01&time=20:00&event_type=concert")
-	req := httptest.NewRequest(http.MethodPost, "/admin/evenements", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, true, "/admin/evenements", "/admin/evenements",
+		"name=Concert+de+printemps&date=2026-06-01&time=20:00&event_type=concert", h.Create)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Equal(t, "/admin/evenements", res.Header().Get("Location"))
 }
 
 func TestEventsHandler_Create_MissingName(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.POST("/admin/evenements", h.Create)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("name=&date=2026-06-01&time=20:00&event_type=concert")
-	req := httptest.NewRequest(http.MethodPost, "/admin/evenements", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, true, "/admin/evenements", "/admin/evenements",
+		"name=&date=2026-06-01&time=20:00&event_type=concert", h.Create)
 	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
 	assert.Contains(t, res.Body.String(), "nom")
 }
 
 func TestEventsHandler_Create_InvalidType(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.POST("/admin/evenements", h.Create)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("name=Concert&date=2026-06-01&time=20:00&event_type=invalid")
-	req := httptest.NewRequest(http.MethodPost, "/admin/evenements", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, true, "/admin/evenements", "/admin/evenements",
+		"name=Concert&date=2026-06-01&time=20:00&event_type=invalid", h.Create)
 	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
 }
 
 func TestEventsHandler_Create_InvalidDate(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.POST("/admin/evenements", h.Create)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("name=Concert&date=not-a-date&time=20:00&event_type=concert")
-	req := httptest.NewRequest(http.MethodPost, "/admin/evenements", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, true, "/admin/evenements", "/admin/evenements",
+		"name=Concert&date=not-a-date&time=20:00&event_type=concert", h.Create)
 	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
 }
 
 // --- Delete ---
 
 func TestEventsHandler_Delete_Success(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.DELETE("/admin/evenements/{id}", h.Delete)
-	})
-
-	res := httptest.NewRecorder()
-	body := strings.NewReader("confirmed=true")
-	req := httptest.NewRequest(http.MethodDelete, "/admin/evenements/1", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsDelete(h, true, "/admin/evenements/{id}", "/admin/evenements/1", "confirmed=true", h.Delete)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Equal(t, "/admin/evenements", res.Header().Get("Location"))
 }
 
 func TestEventsHandler_Delete_NotConfirmed(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.DELETE("/admin/evenements/{id}", h.Delete)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/admin/evenements/1", nil)
-	app.ServeHTTP(res, req)
-
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsDelete(h, true, "/admin/evenements/{id}", "/admin/evenements/1", "", h.Delete)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 }
 
 // --- AdminUpdateRSVP (JSON endpoint) ---
 
+func runAdminUpdateRSVP(h EventsHandler, eventPath string, payload []byte) *httptest.ResponseRecorder {
+	return runEventsJSON(h, true,
+		"/admin/evenements/{id}/rsvp/{musician_id}", eventPath, payload, h.AdminUpdateRSVP)
+}
+
 func TestEventsHandler_AdminUpdateRSVP_Success(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.PATCH("/admin/evenements/{id}/rsvp/{musician_id}", h.AdminUpdateRSVP)
-	})
-
 	payload, _ := json.Marshal(map[string]string{"state": "yes"})
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/admin/evenements/1/rsvp/2", bytes.NewReader(payload))
-	req.Header.Set("Content-Type", "application/json")
-	app.ServeHTTP(res, req)
-
+	res := runAdminUpdateRSVP(newEventsHandler(&stubEventManager{}), "/admin/evenements/1/rsvp/2", payload)
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), `"ok":true`)
 }
 
 func TestEventsHandler_AdminUpdateRSVP_InvalidEventID(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.PATCH("/admin/evenements/{id}/rsvp/{musician_id}", h.AdminUpdateRSVP)
-	})
-
 	payload, _ := json.Marshal(map[string]string{"state": "yes"})
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/admin/evenements/not-a-number/rsvp/2", bytes.NewReader(payload))
-	req.Header.Set("Content-Type", "application/json")
-	app.ServeHTTP(res, req)
-
+	res := runAdminUpdateRSVP(newEventsHandler(&stubEventManager{}), "/admin/evenements/not-a-number/rsvp/2", payload)
 	assert.Equal(t, http.StatusBadRequest, res.Code)
 }
 
 func TestEventsHandler_AdminUpdateRSVP_ServiceError(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{rsvpErr: errors.New("db error")},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.PATCH("/admin/evenements/{id}/rsvp/{musician_id}", h.AdminUpdateRSVP)
-	})
-
 	payload, _ := json.Marshal(map[string]string{"state": "yes"})
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/admin/evenements/1/rsvp/2", bytes.NewReader(payload))
-	req.Header.Set("Content-Type", "application/json")
-	app.ServeHTTP(res, req)
-
+	res := runAdminUpdateRSVP(newEventsHandler(&stubEventManager{rsvpErr: errors.New("db error")}), "/admin/evenements/1/rsvp/2", payload)
 	assert.Equal(t, http.StatusInternalServerError, res.Code)
 }
 
 func TestEventsHandler_AdminUpdateRSVP_RSVPNotFound(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{rsvpErr: services.ErrRSVPNotFound},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.PATCH("/admin/evenements/{id}/rsvp/{musician_id}", h.AdminUpdateRSVP)
-	})
-
 	payload, _ := json.Marshal(map[string]string{"state": "yes"})
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/admin/evenements/1/rsvp/2", bytes.NewReader(payload))
-	req.Header.Set("Content-Type", "application/json")
-	app.ServeHTTP(res, req)
-
+	res := runAdminUpdateRSVP(newEventsHandler(&stubEventManager{rsvpErr: services.ErrRSVPNotFound}), "/admin/evenements/1/rsvp/2", payload)
 	assert.Equal(t, http.StatusNotFound, res.Code)
 }
 
 func TestEventsHandler_AdminUpdateRSVP_InstrumentRequired(t *testing.T) {
-	h := EventsHandler{
-		Events:      &stubEventManager{rsvpErr: services.ErrInstrumentRequired},
-		Instruments: stubInstrumentRepoE{},
-		Membership:  &stubMusicianProfileMgrE{},
-	}
-	app := newEventsTestApp(h, defaultAccount(), true, func(a *buffalo.App) {
-		a.PATCH("/admin/evenements/{id}/rsvp/{musician_id}", h.AdminUpdateRSVP)
-	})
-
 	payload, _ := json.Marshal(map[string]string{"state": "yes"})
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/admin/evenements/1/rsvp/2", bytes.NewReader(payload))
-	req.Header.Set("Content-Type", "application/json")
-	app.ServeHTTP(res, req)
-
+	res := runAdminUpdateRSVP(newEventsHandler(&stubEventManager{rsvpErr: services.ErrInstrumentRequired}), "/admin/evenements/1/rsvp/2", payload)
 	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
 }
