@@ -1,0 +1,55 @@
+<div class="page-shell">
+    <div class="page-shell__header">
+        <div>
+            <nav aria-label="fil d'Ariane" class="breadcrumb">
+                <a href="/">Accueil</a>
+                <span class="breadcrumb__sep">›</span>
+                <span>Tableau de bord</span>
+            </nav>
+            <h1>Tableau de bord</h1>
+        </div>
+    </div>
+
+    <%= if (eventsEmpty) { %>
+    <div class="empty">
+        <h2>Aucun événement</h2>
+        <p>Aucun événement à venir pour le moment.</p>
+    </div>
+    <% } else { %>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-4)">
+        <%= for (e) in events { %>
+        <section class="card" aria-labelledby="event-title-<%= e.ID %>">
+            <div class="card__header">
+                <div style="display:flex;align-items:baseline;gap:var(--sp-3)">
+                    <h2 id="event-title-<%= e.ID %>" style="font-size:var(--fs-20)"><a href="/evenements/<%= e.ID %>"><%= e.Name %></a></h2>
+                    <%= if (e.EventType == "concert") { %>
+                        <span class="event-type event-type--concert">Concert</span>
+                    <% } else if (e.EventType == "rehearsal") { %>
+                        <span class="event-type event-type--rehearsal">Répétition</span>
+                    <% } else { %>
+                        <span class="event-type event-type--other">Autre</span>
+                    <% } %>
+                </div>
+                <%= if (e.RSVPState == "yes") { %>
+                    <span class="rsvp-state rsvp-state--yes">Présent</span>
+                <% } else if (e.RSVPState == "no") { %>
+                    <span class="rsvp-state rsvp-state--no">Absent</span>
+                <% } else if (e.RSVPState == "maybe") { %>
+                    <span class="rsvp-state rsvp-state--maybe">Peut-être</span>
+                <% } else if (e.RSVPState == "unanswered") { %>
+                    <span class="rsvp-state rsvp-state--unanswered">Sans réponse</span>
+                <% } %>
+            </div>
+            <div class="card__body">
+                <p class="muted" style="font-size:var(--fs-14);margin-bottom:<%= if (e.Description != "") { %>var(--sp-4)<% } else { %>0<% } %>"><%= e.Datetime.Format("lundi 2 janvier 2006 à 15h04") %></p>
+                <%= if (e.Description != "") { %>
+                <div class="prose">
+                    <%= markdownToHTML(e.Description) %>
+                </div>
+                <% } %>
+            </div>
+        </section>
+        <% } %>
+    </div>
+    <% } %>
+</div>

@@ -121,9 +121,9 @@ type FeePaymentRepository interface {
 // EventRepository is the interface EventService depends on to access event and field data.
 // The real implementation is models.EventStore; tests inject stubs.
 type EventRepository interface {
-	Create(tx *pop.Connection, name, eventType string, datetime time.Time) (int64, error)
+	Create(tx *pop.Connection, name, eventType, description string, datetime time.Time) (int64, error)
 	GetByID(tx *pop.Connection, id int64) (*models.EventDetailRow, error)
-	Update(tx *pop.Connection, id int64, name, eventType string, datetime time.Time) error
+	Update(tx *pop.Connection, id int64, name, eventType, description string, datetime time.Time) error
 	Delete(tx *pop.Connection, id int64) error
 	ListUpcoming(tx *pop.Connection, accountID int64) ([]models.EventListRow, error)
 	ListAll(tx *pop.Connection, accountID int64) ([]models.EventListRow, error)

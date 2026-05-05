@@ -147,19 +147,19 @@ See `specs/technical-adrs/007-account-musician-dtos.md`.
 
 ---
 
-### EventService (`services/event.go`) — Phase 4.6 ✅
+### EventService (`services/event.go`) — Phase 4.6 ✅ + adj-1
 
 **Context:** Event Coordination. Owns both events and RSVPs (no separate RSVPService).
 
-**Status:** Phase 4.6 ✅
+**Status:** Phase 4.6 ✅ + adj-1 (description field, dashboard template)
 
 | Method | Notes |
 |--------|-------|
-| `ListForMember` | Upcoming events (today included), with viewer's own RSVP state |
-| `ListAll` | All events past and future, with viewer's own RSVP state |
+| `ListForMember` | Upcoming events (today included), with viewer's own RSVP state + description |
+| `ListAll` | All events past and future, with viewer's own RSVP state + description |
 | `GetDetail` | Full RSVP list + pupitre headcounts + custom fields |
-| `Create` | Bulk RSVP seed for all active accounts on save |
-| `Update` | Type-change RSVP effects applied atomically (see spec table) |
+| `Create` | Accepts `description`; bulk RSVP seed for all active accounts on save |
+| `Update` | Accepts `description`; type-change RSVP effects applied atomically (see spec table) |
 | `Delete` | Cascades to RSVPs via DB FK |
 | `UpdateRSVP` | Validates instrument for concerts; clears field responses on state change |
 | `GetField` | Returns single field DTO for edit form |
@@ -247,7 +247,7 @@ construction. See `specs/technical-adrs/007-account-musician-dtos.md`.
 | `RetentionEntryDTO` | `musician.go` | Membership | AccountID, Name, Instrument, LastSeasonLabel, LastSeasonEndDate |
 | `SeasonDTO` | `season.go` | Membership | ID, Label, StartDate, EndDate, IsCurrent |
 | `FeePaymentDTO` | `fee_payment.go` | Membership | ID, AccountID, SeasonID, SeasonLabel, PaymentDate, Amount, PaymentType, Comment |
-| `EventSummaryDTO` | `event.go` | Event Coordination | ID, Name, EventType, Datetime, OwnRSVPState |
+| `EventSummaryDTO` | `event.go` | Event Coordination | ID, Name, EventType, Datetime, RSVPState, Description |
 | `EventDetailDTO` | `event.go` | Event Coordination | + full RSVP list, custom fields |
 | `RSVPRowDTO` | `event.go` | Event Coordination | AccountID, DisplayName, State, InstrumentID, InstrumentName, MainInstrument, FieldResponses |
 | `EventFieldDTO` | `event.go` | Event Coordination | ID, Label, FieldType, Required, Position, Choices |
@@ -276,6 +276,7 @@ templates/
   profile/
     show.plush.html
   events/
+    dashboard.plush.html  ← /tableau-de-bord card layout (adj-1)
     index.plush.html
     show.plush.html
   admin/
@@ -308,6 +309,20 @@ Introduce a DTO when any of these apply:
 - **Post-anonymization display** — `FeePayment` renders a name or an anonymization token depending on account state
 
 Passing a model struct directly to a template is acceptable only when all hold: no sensitive fields, no display transformation, 1:1 with DB columns. `Instrument` (ID + Name, read-only reference data) is the canonical example.
+
+---
+
+## Template Helpers (`actions/render.go`)
+
+Registered as Plush helpers alongside the render engine init.
+
+| Helper | Since | Returns | Notes |
+|--------|-------|---------|-------|
+| `currentYear` | Phase 4.1 | `int` | Current calendar year for footer |
+| `fmtAmount` | Phase 4.5 | `string` | Two-decimal float formatting |
+| `toJSON` | Phase 4.6 | `string` | JSON-encodes a value for Alpine.js `data-*` attributes |
+| `itoa` | Phase 4.6 | `string` | `int64` → decimal string |
+| `markdownToHTML` | adj-1 | `template.HTML` | Converts user-supplied markdown to safe HTML via goldmark. **XSS invariant:** goldmark is never configured with `WithUnsafe()`; raw HTML in input is stripped. Return type is `template.HTML` — Plush will not double-escape it. See ADR-009. |
 
 ---
 

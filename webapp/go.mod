@@ -16,6 +16,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.42.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
 	github.com/unrolled/secure v1.17.0
+	github.com/yuin/goldmark v1.8.2
 	golang.org/x/crypto v0.49.0
 )
 

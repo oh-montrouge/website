@@ -33,11 +33,12 @@ type FieldResponseInput struct {
 
 // EventSummaryDTO is the list-view representation of an event.
 type EventSummaryDTO struct {
-	ID        int64
-	Name      string
-	EventType string // "concert" | "rehearsal" | "other"
-	Datetime  time.Time
-	RSVPState string // viewer's own state; "" if no RSVP record
+	ID          int64
+	Name        string
+	EventType   string // "concert" | "rehearsal" | "other"
+	Datetime    time.Time
+	RSVPState   string // viewer's own state; "" if no RSVP record
+	Description string
 }
 
 // OwnRSVPDTO carries the viewer's own RSVP state for an event detail page.
@@ -132,8 +133,8 @@ type EventManager interface {
 	ListForMember(tx *pop.Connection, accountID int64) ([]EventSummaryDTO, error)
 	ListAll(tx *pop.Connection, accountID int64) ([]EventSummaryDTO, error)
 	GetDetail(tx *pop.Connection, eventID, accountID int64) (*EventDetailDTO, error)
-	Create(tx *pop.Connection, name, eventType string, datetime time.Time) error
-	Update(tx *pop.Connection, id int64, name, eventType string, datetime time.Time) error
+	Create(tx *pop.Connection, name, eventType, description string, datetime time.Time) error
+	Update(tx *pop.Connection, id int64, name, eventType, description string, datetime time.Time) error
 	Delete(tx *pop.Connection, id int64) error
 	UpdateRSVP(tx *pop.Connection, eventID, accountID int64, state string, instrumentID *int64, fieldResponses []FieldResponseInput) error
 	GetField(tx *pop.Connection, fieldID int64) (*EventFieldDTO, error)
@@ -177,12 +178,17 @@ func toSummaryDTOs(rows []models.EventListRow) []EventSummaryDTO {
 		if r.RSVPState.Valid {
 			state = r.RSVPState.String
 		}
+		desc := ""
+		if r.Description.Valid {
+			desc = r.Description.String
+		}
 		dtos[i] = EventSummaryDTO{
-			ID:        r.ID,
-			Name:      r.Name,
-			EventType: r.EventType,
-			Datetime:  r.Datetime,
-			RSVPState: state,
+			ID:          r.ID,
+			Name:        r.Name,
+			EventType:   r.EventType,
+			Datetime:    r.Datetime,
+			RSVPState:   state,
+			Description: desc,
 		}
 	}
 	return dtos
@@ -388,8 +394,8 @@ func buildPupitre(rsvps []models.RSVPListRow) []PupitreRowDTO {
 }
 
 // Create creates an event and seeds RSVPs for all active accounts.
-func (s EventService) Create(tx *pop.Connection, name, eventType string, datetime time.Time) error {
-	eventID, err := s.Events.Create(tx, name, eventType, datetime)
+func (s EventService) Create(tx *pop.Connection, name, eventType, description string, datetime time.Time) error {
+	eventID, err := s.Events.Create(tx, name, eventType, description, datetime)
 	if err != nil {
 		return err
 	}
@@ -397,7 +403,7 @@ func (s EventService) Create(tx *pop.Connection, name, eventType string, datetim
 }
 
 // Update saves event changes and applies type-change effects atomically.
-func (s EventService) Update(tx *pop.Connection, id int64, name, eventType string, datetime time.Time) error {
+func (s EventService) Update(tx *pop.Connection, id int64, name, eventType, description string, datetime time.Time) error {
 	event, err := s.Events.GetByID(tx, id)
 	if err != nil {
 		return err
@@ -407,7 +413,7 @@ func (s EventService) Update(tx *pop.Connection, id int64, name, eventType strin
 	}
 	oldType := event.EventType
 
-	if err := s.Events.Update(tx, id, name, eventType, datetime); err != nil {
+	if err := s.Events.Update(tx, id, name, eventType, description, datetime); err != nil {
 		return err
 	}
 

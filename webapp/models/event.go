@@ -18,11 +18,12 @@ type EventDetailRow struct {
 
 // EventListRow is the result of list queries that include the viewer's own RSVP state.
 type EventListRow struct {
-	ID        int64        `db:"id"`
-	Name      string       `db:"name"`
-	Datetime  time.Time    `db:"datetime"`
-	EventType string       `db:"event_type"`
-	RSVPState nulls.String `db:"rsvp_state"` // null when no RSVP record exists for viewer
+	ID          int64        `db:"id"`
+	Name        string       `db:"name"`
+	Datetime    time.Time    `db:"datetime"`
+	EventType   string       `db:"event_type"`
+	RSVPState   nulls.String `db:"rsvp_state"` // null when no RSVP record exists for viewer
+	Description nulls.String `db:"description"`
 }
 
 // RSVPRow is the raw RSVP record (used for own-RSVP lookup).
@@ -77,13 +78,17 @@ type RSVPFieldResponseRow struct {
 // EventStore is the production implementation of services.EventRepository.
 type EventStore struct{}
 
-func (EventStore) Create(tx *pop.Connection, name, eventType string, datetime time.Time) (int64, error) {
+func (EventStore) Create(tx *pop.Connection, name, eventType, description string, datetime time.Time) (int64, error) {
 	var row struct {
 		ID int64 `db:"id"`
 	}
+	var desc nulls.String
+	if description != "" {
+		desc = nulls.NewString(description)
+	}
 	err := tx.RawQuery(
-		`INSERT INTO events (name, event_type, datetime) VALUES (?, ?, ?) RETURNING id`,
-		name, eventType, datetime,
+		`INSERT INTO events (name, event_type, datetime, description) VALUES (?, ?, ?, ?) RETURNING id`,
+		name, eventType, datetime, desc,
 	).First(&row)
 	return row.ID, err
 }
@@ -102,10 +107,14 @@ func (EventStore) GetByID(tx *pop.Connection, id int64) (*EventDetailRow, error)
 	return &rows[0], nil
 }
 
-func (EventStore) Update(tx *pop.Connection, id int64, name, eventType string, datetime time.Time) error {
+func (EventStore) Update(tx *pop.Connection, id int64, name, eventType, description string, datetime time.Time) error {
+	var desc nulls.String
+	if description != "" {
+		desc = nulls.NewString(description)
+	}
 	return tx.RawQuery(
-		`UPDATE events SET name=?, event_type=?, datetime=? WHERE id=?`,
-		name, eventType, datetime, id,
+		`UPDATE events SET name=?, event_type=?, datetime=?, description=? WHERE id=?`,
+		name, eventType, datetime, desc, id,
 	).Exec()
 }
 
@@ -116,7 +125,7 @@ func (EventStore) Delete(tx *pop.Connection, id int64) error {
 func (EventStore) ListUpcoming(tx *pop.Connection, accountID int64) ([]EventListRow, error) {
 	var rows []EventListRow
 	err := tx.RawQuery(`
-		SELECT e.id, e.name, e.datetime, e.event_type, r.state AS rsvp_state
+		SELECT e.id, e.name, e.datetime, e.event_type, e.description, r.state AS rsvp_state
 		FROM events e
 		LEFT JOIN rsvps r ON r.event_id = e.id AND r.account_id = ?
 		WHERE e.datetime >= NOW()
@@ -128,7 +137,7 @@ func (EventStore) ListUpcoming(tx *pop.Connection, accountID int64) ([]EventList
 func (EventStore) ListAll(tx *pop.Connection, accountID int64) ([]EventListRow, error) {
 	var rows []EventListRow
 	err := tx.RawQuery(`
-		SELECT e.id, e.name, e.datetime, e.event_type, r.state AS rsvp_state
+		SELECT e.id, e.name, e.datetime, e.event_type, e.description, r.state AS rsvp_state
 		FROM events e
 		LEFT JOIN rsvps r ON r.event_id = e.id AND r.account_id = ?
 		ORDER BY e.datetime ASC`, accountID,

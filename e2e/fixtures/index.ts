@@ -43,6 +43,7 @@ export interface EventOptions {
   type: 'concert' | 'rehearsal' | 'other';
   date?: string; // YYYY-MM-DD, defaults to a future date
   time?: string; // HH:MM, defaults to 20:00
+  description?: string;
 }
 
 export async function createEvent(
@@ -55,6 +56,9 @@ export async function createEvent(
   await page.fill('#event-date', date);
   await page.fill('#event-time', opts.time ?? '20:00');
   await page.selectOption('#event-type', opts.type);
+  if (opts.description) {
+    await page.fill('#event-description', opts.description);
+  }
   await page.click('[type=submit]');
   // After creation, navigate to the member events list and find the event by name
   await page.goto('/evenements');

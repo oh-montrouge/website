@@ -13,6 +13,8 @@ var (
 	evFuture = time.Now().UTC().Add(48 * time.Hour)
 )
 
+var eventDatetime = time.Date(2026, 6, 15, 20, 0, 0, 0, time.UTC)
+
 // insertEventAccount inserts one instrument and one active account, returning the account ID.
 func insertEventAccount(t *testing.T) int64 {
 	t.Helper()
@@ -53,7 +55,7 @@ func insertEventAccounts(t *testing.T, emails ...string) (instrID int64, ids []i
 
 func insertTestEvent(t *testing.T, name, eventType string, dt time.Time) int64 {
 	t.Helper()
-	id, err := EventStore{}.Create(DB, name, eventType, dt)
+	id, err := EventStore{}.Create(DB, name, eventType, "", dt)
 	require.NoError(t, err)
 	return id
 }
@@ -76,7 +78,7 @@ func insertRSVPRow(t *testing.T, accountID, eventID int64, state string) int64 {
 func TestEventStore_Create(t *testing.T) {
 	truncateAll(t)
 	store := EventStore{}
-	id, err := store.Create(DB, "Concert d'automne", "concert", evFuture)
+	id, err := store.Create(DB, "Concert d'automne", "concert", "", evFuture)
 	require.NoError(t, err)
 	assert.Positive(t, id)
 
@@ -85,6 +87,34 @@ func TestEventStore_Create(t *testing.T) {
 	require.NotNil(t, row)
 	assert.Equal(t, "Concert d'automne", row.Name)
 	assert.Equal(t, "concert", row.EventType)
+}
+
+func TestEventStore_Create_WithDescription(t *testing.T) {
+	truncateAll(t)
+	store := EventStore{}
+
+	id, err := store.Create(DB, "Concert de printemps", "concert", "**Première** de la saison", eventDatetime)
+	require.NoError(t, err)
+	assert.Positive(t, id)
+
+	row, err := store.GetByID(DB, id)
+	require.NoError(t, err)
+	require.NotNil(t, row)
+	assert.True(t, row.Description.Valid)
+	assert.Equal(t, "**Première** de la saison", row.Description.String)
+}
+
+func TestEventStore_Create_WithoutDescription(t *testing.T) {
+	truncateAll(t)
+	store := EventStore{}
+
+	id, err := store.Create(DB, "Répétition", "rehearsal", "", eventDatetime)
+	require.NoError(t, err)
+
+	row, err := store.GetByID(DB, id)
+	require.NoError(t, err)
+	require.NotNil(t, row)
+	assert.False(t, row.Description.Valid, "empty description should store as NULL")
 }
 
 func TestEventStore_GetByID_Found(t *testing.T) {
@@ -110,7 +140,7 @@ func TestEventStore_Update(t *testing.T) {
 	store := EventStore{}
 	id := insertTestEvent(t, "Old Name", "concert", evPast)
 
-	require.NoError(t, store.Update(DB, id, "New Name", "other", evFuture))
+	require.NoError(t, store.Update(DB, id, "New Name", "other", "", evFuture))
 
 	row, err := store.GetByID(DB, id)
 	require.NoError(t, err)
@@ -118,6 +148,39 @@ func TestEventStore_Update(t *testing.T) {
 	assert.Equal(t, "New Name", row.Name)
 	assert.Equal(t, "other", row.EventType)
 	assert.True(t, row.Datetime.After(time.Now()))
+}
+
+func TestEventStore_Update_Description(t *testing.T) {
+	truncateAll(t)
+	store := EventStore{}
+
+	id, err := store.Create(DB, "Concert", "concert", "", eventDatetime)
+	require.NoError(t, err)
+
+	err = store.Update(DB, id, "Concert modifié", "concert", "Nouvelle description", eventDatetime)
+	require.NoError(t, err)
+
+	row, err := store.GetByID(DB, id)
+	require.NoError(t, err)
+	require.NotNil(t, row)
+	assert.True(t, row.Description.Valid)
+	assert.Equal(t, "Nouvelle description", row.Description.String)
+}
+
+func TestEventStore_Update_ClearsDescription(t *testing.T) {
+	truncateAll(t)
+	store := EventStore{}
+
+	id, err := store.Create(DB, "Concert", "concert", "Description initiale", eventDatetime)
+	require.NoError(t, err)
+
+	err = store.Update(DB, id, "Concert", "concert", "", eventDatetime)
+	require.NoError(t, err)
+
+	row, err := store.GetByID(DB, id)
+	require.NoError(t, err)
+	require.NotNil(t, row)
+	assert.False(t, row.Description.Valid, "empty description update should clear to NULL")
 }
 
 func TestEventStore_Delete(t *testing.T) {
@@ -168,6 +231,22 @@ func TestEventStore_ListUpcoming_IncludesRSVPState(t *testing.T) {
 	assert.False(t, rows[0].RSVPState.Valid)
 }
 
+func TestEventStore_ListUpcoming_IncludesDescription(t *testing.T) {
+	truncateAll(t)
+	store := EventStore{}
+
+	future := time.Now().Add(7 * 24 * time.Hour)
+	id, err := store.Create(DB, "Répétition à venir", "rehearsal", "Détails de la répétition", future)
+	require.NoError(t, err)
+
+	rows, err := store.ListUpcoming(DB, 0)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, id, rows[0].ID)
+	assert.True(t, rows[0].Description.Valid)
+	assert.Equal(t, "Détails de la répétition", rows[0].Description.String)
+}
+
 func TestEventStore_ListAll_IncludesPastAndFuture(t *testing.T) {
 	truncateAll(t)
 	insertTestEvent(t, "Past", "concert", evPast)
@@ -176,6 +255,35 @@ func TestEventStore_ListAll_IncludesPastAndFuture(t *testing.T) {
 	rows, err := EventStore{}.ListAll(DB, 0)
 	require.NoError(t, err)
 	assert.Len(t, rows, 2)
+}
+
+func TestEventStore_ListAll_IncludesDescription(t *testing.T) {
+	truncateAll(t)
+	store := EventStore{}
+
+	id, err := store.Create(DB, "Concert passé", "concert", "Description du concert", eventDatetime)
+	require.NoError(t, err)
+
+	rows, err := store.ListAll(DB, 0)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, id, rows[0].ID)
+	assert.True(t, rows[0].Description.Valid)
+	assert.Equal(t, "Description du concert", rows[0].Description.String)
+}
+
+func TestEventStore_ListAll_NullDescriptionRow(t *testing.T) {
+	truncateAll(t)
+	store := EventStore{}
+
+	id, err := store.Create(DB, "Concert sans description", "concert", "", eventDatetime)
+	require.NoError(t, err)
+
+	rows, err := store.ListAll(DB, 0)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, id, rows[0].ID)
+	assert.False(t, rows[0].Description.Valid)
 }
 
 func TestEventStore_DeleteFields(t *testing.T) {
