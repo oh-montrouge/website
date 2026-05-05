@@ -13,7 +13,7 @@ lefthook = "2.1.5"
 golangci-lint = "2.11.4"
 node = {version = "latest", postinstall = "npm install -g jscpd"}
 
-[prepare.lefthook]
+[deps.lefthook]
 auto = true
 sources = ["lefthook.yml"]
 outputs = [".git/hooks/pre-commit"]
@@ -21,7 +21,7 @@ run = "lefthook install"
 description = "Register git pre-commit hooks — reruns automatically when lefthook.yml changes"
 
 [[hooks.postinstall]]
-script = "mise prepare"
+script = "mise deps"
 
 [tasks."dev:start"]
 description = "Start local environment (postgres in Docker + buffalo dev)"
