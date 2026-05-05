@@ -20,6 +20,12 @@ outputs = [".git/hooks/pre-commit"]
 run = "lefthook install"
 description = "Register git pre-commit hooks — reruns automatically when lefthook.yml changes"
 
+[deps.playwright]
+sources = ["e2e/package.json", "e2e/package-lock.json"]
+outputs = ["e2e/node_modules/.package-lock.json"]
+run = "cd e2e && npm ci && npx playwright install chromium"
+description = "Install Playwright dependencies and Chromium browser binary"
+
 [[hooks.postinstall]]
 script = "mise deps"
 
@@ -79,6 +85,11 @@ GO_ENV=test go test -race $COVER ./...
 description = "Run full linter suite"
 dir = "webapp"
 run = "golangci-lint run ./..."
+
+[tasks."test:e2e"]
+description = "Run e2e suite — DB and app spin up automatically via Playwright globalSetup"
+dir = "e2e"
+run = "npx playwright test"
 
 [tasks."prod:publish"]
 description = "Build and push production Docker image — requires IMAGE_REPO in shell profile"
