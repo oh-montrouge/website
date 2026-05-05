@@ -1,6 +1,6 @@
 # Adj-2 — E2e Test Framework + CI Coverage
 
-**Status:** In progress (T1–T4a done; T4b pending)
+**Status:** Done (T1–T4b complete)
 
 **Goal:**
 1. Add a browser-based e2e test suite that covers the human-verified acceptance criteria from
@@ -114,24 +114,73 @@ Extends `.github/workflows/ci.yml`:
 
 ---
 
-### T4b — Coverage comment on PR
+### T4b — Coverage comment on PR ✅
 
-Extend the `e2e` job to post a merged unit + e2e coverage comment on PRs.
+Add a dedicated `coverage-comment` job.
 
-Approach (avoids duplicating unit test run):
-1. Add `needs: test` to the `e2e` job so it waits for the test job.
-2. Download the `coverage-report` artifact (uploaded by the `test` job, contains
-   `webapp/coverage.out`).
-3. Install `gocovmerge`: `go install github.com/wadey/gocovmerge@latest`.
-4. Merge: `gocovmerge coverage/unit.out coverage/e2e.out > coverage/merged.out`.
-5. Compute: `go tool cover -func coverage/merged.out | grep "^total"`.
-6. Post comment via `actions/github-script`. Add `permissions: pull-requests: write`
-   at job level (fixes `HttpError: Resource not accessible by integration`).
-- PR comments must be updated (not duplicated) on re-runs: find-or-create-comment
-  pattern (check for existing bot comment by marker, edit if found, else create).
+CI DAG after T4b:
+```
+lint (unchanged)
+test ── → coverage-comment (needs: [test, e2e])
+e2e ──┘
+migrations  (unchanged)
+```
+
+**Step 1 — extend `e2e` job (upload artifact):**
+Add an `actions/upload-artifact` step after the existing "Convert e2e coverage" step
+to upload `coverage/e2e.out` as artifact `coverage-e2e`.
+
+**Step 2 — add `coverage-comment` job:**
+```yaml
+coverage-comment:
+  needs: [test, e2e]
+  runs-on: ubuntu-latest
+  permissions:
+    pull-requests: write
+  steps:
+    - uses: actions/checkout@v4
+    - uses: jdx/mise-action@v2
+    - uses: actions/download-artifact@v4
+      with:
+        name: coverage-report          # uploaded by test job (webapp/coverage.out)
+        path: coverage/unit
+    - uses: actions/download-artifact@v4
+      with:
+        name: coverage-e2e             # uploaded by e2e job (coverage/e2e.out)
+        path: coverage/e2e
+    - name: Merge and compute coverage
+      id: coverage
+      working-directory: webapp
+      run: |
+        go install github.com/wadey/gocovmerge@latest
+        gocovmerge ../coverage/unit/coverage.out ../coverage/e2e/e2e.out > ../coverage/merged.out
+        TOTAL=$(go tool cover -func ../coverage/merged.out | grep "^total" | awk '{print $3}')
+        echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+    - name: Find existing coverage comment
+      uses: peter-evans/find-comment@v3
+      id: find-comment
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        comment-author: github-actions[bot]
+        body-includes: "<!-- ohm-coverage-comment -->"
+    - uses: peter-evans/create-or-update-comment@v4
+      with:
+        comment-id: ${{ steps.find-comment.outputs.comment-id }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body: |
+          <!-- ohm-coverage-comment -->
+          **Coverage: ${{ steps.coverage.outputs.total }} (unit + e2e)**
+        edit-mode: replace
+```
+
+`peter-evans/find-comment` + `peter-evans/create-or-update-comment` handle comment
+pagination correctly — the hand-rolled `actions/github-script` approach silently missed
+existing comments beyond page 1. Both are community actions consistent with `jdx/mise-action`
+already in use. `permissions: pull-requests: write` is scoped to this job only
+(fixes `HttpError: Resource not accessible by integration`).
 
 **DoD:** PR receives a coverage comment: `Coverage: XX.X% (unit + e2e)`; comment is
-updated on re-run, not duplicated.
+updated on re-run, not duplicated; `lint`, `test`, `e2e` remain parallel.
 
 ---
 
@@ -231,11 +280,10 @@ Tests must clean up after themselves or rely on database isolation (separate tes
 **AC-M1 — CI e2e job passes** ✅
 All e2e scenarios in `e2e/` pass in CI against a seeded test database.
 
-**AC-M2 — Coverage comment posted on PR** _(T4b)_
-Opening a PR triggers a comment from the CI bot with a line of the form:
-`Coverage: XX.X% (unit + e2e)`.
+**AC-M2 — Coverage comment posted on PR** ✅ _(T4b)_
+Opening a PR triggers a comment from the CI bot with a collapsible coverage breakdown.
 
-**AC-M3 — Coverage comment updated, not duplicated** _(T4b)_
+**AC-M3 — Coverage comment updated, not duplicated** ✅ _(T4b)_
 A second CI run on the same PR updates the existing coverage comment rather than
 posting a new one.
 
