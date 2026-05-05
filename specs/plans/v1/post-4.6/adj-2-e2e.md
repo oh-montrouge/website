@@ -15,7 +15,6 @@
 **D2 — E2e framework must be decided before implementation begins.**
 See decision section below.
 
-Adj-1 should be complete first so all user flows exist before e2e scenarios are written.
 Adj-3 (jscpd) should be complete so the pre-commit hook doesn't block e2e scaffolding commits.
 
 ---
@@ -181,14 +180,6 @@ be automated in CI.
 | Rehearsal RSVP form has no instrument dropdown | AC-H2 | Visit rehearsal detail; no instrument select |
 | Custom field lifecycle: add, edit, delete (no responses) | AC-H3 | Admin: add field → edit label → delete; all succeed |
 | Edit blocked when responses exist | AC-H3 | Musician RSVPs yes + fills field; admin edit blocked |
-
-### Adj-1 — Dashboard + Description
-
-| Scenario | Maps to | Notes |
-|----------|---------|-------|
-| Dashboard renders cards, not table | AC-H1 | Assert card elements; assert no table |
-| Markdown description renders as HTML | AC-H2 | Create event with `**bold**`; verify `<strong>` in page |
-| Admin can set and update description | AC-H3 | Create with description; update; verify changes |
 
 ---
 

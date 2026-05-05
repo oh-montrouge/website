@@ -163,6 +163,14 @@ Touches: `webapp/templates/events/show.plush.html`.
 **DoD:** detail page renders markdown correctly for events with a description; no
 regression for events without one.
 
+### T8 — Add e2e tests
+
+| Scenario | Maps to | Notes |
+|----------|---------|-------|
+| Dashboard renders cards, not table | AC-H1 | Assert card elements; assert no table |
+| Markdown description renders as HTML | AC-H2 | Create event with `**bold**`; verify `<strong>` in page |
+| Admin can set and update description | AC-H3 | Create with description; update; verify changes |
+
 ---
 
 ## Architecture Notes
@@ -190,6 +198,7 @@ regression for events without one.
 | T5 | No unit tests — covered by FRONTEND checklist (visual) |
 | T6 | No unit tests — covered by FRONTEND checklist + AC-H1 |
 | T7 | No unit tests — covered by AC-H2 |
+| T8 | E2E tests |
 
 ---
 
