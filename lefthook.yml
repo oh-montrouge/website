@@ -2,12 +2,12 @@ pre-commit:
   parallel: true
   commands:
     jscpd:
-      run: jscpd webapp --min-lines 10 --gitignore --threshold 4 --ignore "**/templates/**" -s
+      run: jscpd webapp --min-lines 10 --gitignore --threshold 0.25 --ignore "**/templates/**" -s
       skip_output:
         - meta
         - empty_output
     jscpd-templates:
-      run: jscpd webapp --min-lines 15 --gitignore --threshold 4 --format markup -s
+      run: jscpd webapp --min-lines 15 --gitignore --threshold 0 --format markup -s
       skip_output:
         - meta
         - empty_output
