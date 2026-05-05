@@ -1,6 +1,6 @@
 # Adj-2 — E2e Test Framework + CI Coverage
 
-**Status:** In progress
+**Status:** In progress (T1–T4a done; T4b pending)
 
 **Goal:**
 1. Add a browser-based e2e test suite that covers the human-verified acceptance criteria from
@@ -75,7 +75,7 @@ rationale, coverage aggregation strategy, and toolchain additions.
 **DoD:** ADR written; `specs/technical-specs/03-stack.md` updated to record the framework
 and version.
 
-### T2 — Framework setup + local runner
+### T2 — Framework setup + local runner ✅
 
 - Add Playwright (or chosen framework) to the project. For Playwright: `npm init playwright@latest` (or equivalent), configured for TypeScript, tests under `e2e/`.
 - Add a `mise` task `e2e` that: starts the local server (`buffalo dev` equivalent or a test binary), waits for it to be ready, runs the e2e suite, tears down.
@@ -85,7 +85,7 @@ and version.
 **DoD:** `mise run e2e` runs locally and tests execute (even if they immediately fail —
 the runner works); `TESTING.md` updated.
 
-### T3 — E2e scenarios
+### T3 — E2e scenarios ✅
 
 Write e2e tests covering all automatable human-verified ACs from phases 3–4.6 and adj-1.
 Tests must be independent (no shared state between tests; each test sets up what it needs).
@@ -95,27 +95,43 @@ See [Scenario Inventory](#scenario-inventory) below for the full list.
 **DoD:** all scenarios pass locally against a seeded dev database; scenarios are grouped
 by phase in the `e2e/` directory structure.
 
-### T4 — CI integration + coverage comment
+### T4a — CI integration ✅
 
 Extends `.github/workflows/ci.yml`:
 
-- Add an `e2e` job that:
-  1. Installs Node + Playwright dependencies.
-  2. Runs Go unit tests with `-coverprofile`.
+- `e2e` job:
+  1. Caches `e2e/node_modules` + `~/.cache/ms-playwright`, keyed on `package-lock.json`.
+  2. Installs Node + Playwright dependencies (`npm ci`, `playwright install chromium`).
   3. Builds the covered binary (`go build -cover`).
-  4. Starts the covered binary against a test database (PostgreSQL service container,
-     same pattern as the existing `test` job).
+  4. Starts the binary via `globalSetup` (Docker Compose postgres).
   5. Runs Playwright tests.
-  6. Stops the binary.
-  7. Merges coverage profiles (unit + e2e) using `gocovmerge`.
-  8. Computes the aggregated total.
-  9. Posts the result as a PR comment using `actions/github-script`.
+  6. Stops the binary (SIGINT, flushes `GOCOVERDIR`).
+  7. Converts e2e coverage data to text format.
 - The `e2e` job runs in parallel with `lint` and `test`; it is required to pass.
-- PR comments must be updated (not duplicated) on re-runs of the same PR: use
-  `find-or-create-comment` pattern (check for existing bot comment, edit if found).
+- Failures upload Playwright traces as a CI artifact.
 
-**DoD:** CI job passes; PR receives a coverage comment showing the aggregated percentage
-(e.g. `Coverage: 74.3% (unit + e2e)`); comment is updated on re-run, not duplicated.
+**DoD:** CI job passes; traces uploaded on failure; e2e coverage data available. ✅
+
+---
+
+### T4b — Coverage comment on PR
+
+Extend the `e2e` job to post a merged unit + e2e coverage comment on PRs.
+
+Approach (avoids duplicating unit test run):
+1. Add `needs: test` to the `e2e` job so it waits for the test job.
+2. Download the `coverage-report` artifact (uploaded by the `test` job, contains
+   `webapp/coverage.out`).
+3. Install `gocovmerge`: `go install github.com/wadey/gocovmerge@latest`.
+4. Merge: `gocovmerge coverage/unit.out coverage/e2e.out > coverage/merged.out`.
+5. Compute: `go tool cover -func coverage/merged.out | grep "^total"`.
+6. Post comment via `actions/github-script`. Add `permissions: pull-requests: write`
+   at job level (fixes `HttpError: Resource not accessible by integration`).
+- PR comments must be updated (not duplicated) on re-runs: find-or-create-comment
+  pattern (check for existing bot comment by marker, edit if found, else create).
+
+**DoD:** PR receives a coverage comment: `Coverage: XX.X% (unit + e2e)`; comment is
+updated on re-run, not duplicated.
 
 ---
 
@@ -212,14 +228,14 @@ Tests must clean up after themselves or rely on database isolation (separate tes
 
 ### Machine-verified
 
-**AC-M1 — CI e2e job passes**
+**AC-M1 — CI e2e job passes** ✅
 All e2e scenarios in `e2e/` pass in CI against a seeded test database.
 
-**AC-M2 — Coverage comment posted on PR**
+**AC-M2 — Coverage comment posted on PR** _(T4b)_
 Opening a PR triggers a comment from the CI bot with a line of the form:
 `Coverage: XX.X% (unit + e2e)`.
 
-**AC-M3 — Coverage comment updated, not duplicated**
+**AC-M3 — Coverage comment updated, not duplicated** _(T4b)_
 A second CI run on the same PR updates the existing coverage comment rather than
 posting a new one.
 

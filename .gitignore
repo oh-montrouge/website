@@ -16,3 +16,13 @@ mise.local.toml
 
 coverage.out
 node_modules
+
+# E2e artifacts
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/.playwright/
+
+# Coverage aggregation artifacts
+coverage/
+bin/app-covered
