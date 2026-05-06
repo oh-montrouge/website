@@ -22,10 +22,11 @@ Every implementation task touching `webapp/` must:
 
 ---
 
-## Test Coverage — Tier 1
+## Unit and integration test Coverage — Tier 1
 
-Every file in `webapp/actions/`, `webapp/services/`, and `webapp/models/` that contains
-at least one function or method body must have a corresponding `*_test.go` file.
+Every function or method body in `webapp/actions/`, `webapp/services/`, and `webapp/models/` must be 100% tested in a corresponding `*_test.go` file.
+
+When touching those files, proceed with TDD.
 
 **Exempt:**
 - Files containing only type/interface/struct declarations with no method bodies
@@ -39,6 +40,12 @@ WAIVER: test coverage — [file] — [reason] — [payback trigger]
 Record in `TECH_DEBT.md`.
 
 See `webapp/TESTING.md` for stub patterns, test app setup, and the integration test harness.
+
+---
+
+## E2E test Coverage — Tier 2
+
+For each implementaiton task, implement an E2E test covering human-verified acceptance criterias.
 
 ---
 

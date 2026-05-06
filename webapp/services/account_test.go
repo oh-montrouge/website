@@ -21,6 +21,7 @@ type stubAccountRepo struct {
 	account   *models.Account
 	err       error
 	createdID int64
+	deleteErr error
 }
 
 func (s stubAccountRepo) FindByEmail(_ *pop.Connection, _ string) (*models.Account, error) {
@@ -52,6 +53,9 @@ func (s stubAccountRepo) UpdateEmail(_ *pop.Connection, _ int64, _ string) error
 }
 
 func (s stubAccountRepo) Delete(_ *pop.Connection, _ int64) error {
+	if s.deleteErr != nil {
+		return s.deleteErr
+	}
 	return s.err
 }
 
@@ -63,13 +67,18 @@ func (s stubAccountRepo) AnonymizeAccount(_ *pop.Connection, _ int64, _ string) 
 type stubRoleRepo struct {
 	hasActiveHolder bool
 	holderErr       error
+	hasRole         bool
+	hasRoleErr      error
 	roleID          int64
 	roleIDErr       error
 	assignErr       error
+	adminCount      int
+	countErr        error
+	revokeErr       error
 }
 
 func (s stubRoleRepo) HasRole(_ *pop.Connection, _ int64, _ string) (bool, error) {
-	return false, nil
+	return s.hasRole, s.hasRoleErr
 }
 
 func (s stubRoleRepo) HasActiveRoleHolder(_ *pop.Connection, _ string) (bool, error) {
@@ -85,11 +94,11 @@ func (s stubRoleRepo) AssignRole(_ *pop.Connection, _, _ int64) error {
 }
 
 func (s stubRoleRepo) CountActiveAdmins(_ *pop.Connection) (int, error) {
-	return 0, nil
+	return s.adminCount, s.countErr
 }
 
 func (s stubRoleRepo) RevokeRole(_ *pop.Connection, _, _ int64) error {
-	return nil
+	return s.revokeErr
 }
 
 func (s stubRoleRepo) RemoveAllRoles(_ *pop.Connection, _ int64) error {
@@ -242,6 +251,8 @@ type stubInviteTokenRepo struct {
 	invalidateErr    error
 	generatedToken   string
 	invalidateCalled bool
+	activeToken      *models.InviteToken
+	activeErr        error
 }
 
 func (s *stubInviteTokenRepo) Generate(_ *pop.Connection, _ int64, token string, _ time.Time) error {
@@ -263,7 +274,7 @@ func (s *stubInviteTokenRepo) InvalidateExisting(_ *pop.Connection, _ int64) err
 }
 
 func (s *stubInviteTokenRepo) FindActiveForAccount(_ *pop.Connection, _ int64) (*models.InviteToken, error) {
-	return nil, nil
+	return s.activeToken, s.activeErr
 }
 
 type stubResetTokenRepo struct {
@@ -273,6 +284,8 @@ type stubResetTokenRepo struct {
 	markUsedErr      error
 	invalidateErr    error
 	invalidateCalled bool
+	activeToken      *models.PasswordResetToken
+	activeErr        error
 }
 
 func (s *stubResetTokenRepo) Generate(_ *pop.Connection, _ int64, _ string, _ time.Time) error {
@@ -293,7 +306,7 @@ func (s *stubResetTokenRepo) InvalidateExisting(_ *pop.Connection, _ int64) erro
 }
 
 func (s *stubResetTokenRepo) FindActiveForAccount(_ *pop.Connection, _ int64) (*models.PasswordResetToken, error) {
-	return nil, nil
+	return s.activeToken, s.activeErr
 }
 
 // --- invite token tests ---
@@ -499,4 +512,239 @@ func TestValidatePasswordStrength_Valid(t *testing.T) {
 	pw := "ValidPassword1!ExtraLong"
 	err := services.ValidatePasswordStrength(pw, pw)
 	assert.NoError(t, err)
+}
+
+// --- GetByID ---
+
+func TestGetByID_Success(t *testing.T) {
+	svc := services.AccountService{
+		Accounts: stubAccountRepo{account: &models.Account{
+			ID:     42,
+			Email:  nulls.NewString("user@example.com"),
+			Status: "active",
+		}},
+	}
+	dto, err := svc.GetByID(nil, 42)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(42), dto.ID)
+	assert.Equal(t, "user@example.com", dto.Email)
+}
+
+func TestGetByID_Error(t *testing.T) {
+	svc := services.AccountService{
+		Accounts: stubAccountRepo{err: errors.New("db error")},
+	}
+	_, err := svc.GetByID(nil, 1)
+	assert.Error(t, err)
+}
+
+// --- CreatePending ---
+
+func TestCreatePending_Success(t *testing.T) {
+	svc := services.AccountService{
+		Accounts: stubAccountRepo{createdID: 7},
+	}
+	id, err := svc.CreatePending(nil, "user@example.com", 1)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(7), id)
+}
+
+func TestCreatePending_Error(t *testing.T) {
+	svc := services.AccountService{
+		Accounts: stubAccountRepo{err: errors.New("db error")},
+	}
+	_, err := svc.CreatePending(nil, "user@example.com", 1)
+	assert.Error(t, err)
+}
+
+// --- GetActiveInviteToken ---
+
+func TestGetActiveInviteToken_NotFound(t *testing.T) {
+	svc := services.AccountService{InviteTokens: &stubInviteTokenRepo{}}
+	tok, err := svc.GetActiveInviteToken(nil, 1, "https://ohm.test")
+	assert.NoError(t, err)
+	assert.Nil(t, tok)
+}
+
+func TestGetActiveInviteToken_Found(t *testing.T) {
+	exp := time.Now().Add(time.Hour)
+	svc := services.AccountService{
+		InviteTokens: &stubInviteTokenRepo{
+			activeToken: &models.InviteToken{Token: "abc123", ExpiresAt: exp},
+		},
+	}
+	tok, err := svc.GetActiveInviteToken(nil, 1, "https://ohm.test")
+	assert.NoError(t, err)
+	assert.NotNil(t, tok)
+	assert.Contains(t, tok.URL, "/invitation/")
+	assert.Equal(t, exp, tok.ExpiresAt)
+}
+
+func TestGetActiveInviteToken_Error(t *testing.T) {
+	svc := services.AccountService{
+		InviteTokens: &stubInviteTokenRepo{activeErr: errors.New("db error")},
+	}
+	_, err := svc.GetActiveInviteToken(nil, 1, "https://ohm.test")
+	assert.Error(t, err)
+}
+
+// --- GetActivePasswordResetToken ---
+
+func TestGetActivePasswordResetToken_NotFound(t *testing.T) {
+	svc := services.AccountService{ResetTokens: &stubResetTokenRepo{}}
+	tok, err := svc.GetActivePasswordResetToken(nil, 1, "https://ohm.test")
+	assert.NoError(t, err)
+	assert.Nil(t, tok)
+}
+
+func TestGetActivePasswordResetToken_Found(t *testing.T) {
+	exp := time.Now().Add(time.Hour)
+	svc := services.AccountService{
+		ResetTokens: &stubResetTokenRepo{
+			activeToken: &models.PasswordResetToken{Token: "rst123", ExpiresAt: exp},
+		},
+	}
+	tok, err := svc.GetActivePasswordResetToken(nil, 1, "https://ohm.test")
+	assert.NoError(t, err)
+	assert.NotNil(t, tok)
+	assert.Contains(t, tok.URL, "/reinitialiser-mot-de-passe/")
+	assert.Equal(t, exp, tok.ExpiresAt)
+}
+
+func TestGetActivePasswordResetToken_Error(t *testing.T) {
+	svc := services.AccountService{
+		ResetTokens: &stubResetTokenRepo{activeErr: errors.New("db error")},
+	}
+	_, err := svc.GetActivePasswordResetToken(nil, 1, "https://ohm.test")
+	assert.Error(t, err)
+}
+
+// --- GrantAdmin ---
+
+func TestGrantAdmin_AlreadyAdmin_Idempotent(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{hasRole: true}}
+	assert.NoError(t, svc.GrantAdmin(nil, 1))
+}
+
+func TestGrantAdmin_Success(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{roleID: 1}}
+	assert.NoError(t, svc.GrantAdmin(nil, 1))
+}
+
+func TestGrantAdmin_HasRoleError(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{hasRoleErr: errors.New("db error")}}
+	assert.Error(t, svc.GrantAdmin(nil, 1))
+}
+
+func TestGrantAdmin_GetIDByNameError(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{roleIDErr: errors.New("db error")}}
+	assert.Error(t, svc.GrantAdmin(nil, 1))
+}
+
+func TestGrantAdmin_AssignError(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{roleID: 1, assignErr: errors.New("db error")}}
+	assert.Error(t, svc.GrantAdmin(nil, 1))
+}
+
+// --- RevokeAdmin ---
+
+func TestRevokeAdmin_NotAdmin_Idempotent(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{hasRole: false}}
+	assert.NoError(t, svc.RevokeAdmin(nil, 1))
+}
+
+func TestRevokeAdmin_LastAdmin(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{hasRole: true, adminCount: 1}}
+	assert.ErrorIs(t, svc.RevokeAdmin(nil, 1), services.ErrLastAdmin)
+}
+
+func TestRevokeAdmin_Success(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{hasRole: true, adminCount: 2, roleID: 1}}
+	assert.NoError(t, svc.RevokeAdmin(nil, 1))
+}
+
+func TestRevokeAdmin_HasRoleError(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{hasRoleErr: errors.New("db error")}}
+	assert.Error(t, svc.RevokeAdmin(nil, 1))
+}
+
+func TestRevokeAdmin_CountError(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{hasRole: true, countErr: errors.New("db error")}}
+	assert.Error(t, svc.RevokeAdmin(nil, 1))
+}
+
+func TestRevokeAdmin_GetIDByNameError(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{hasRole: true, adminCount: 2, roleIDErr: errors.New("db error")}}
+	assert.Error(t, svc.RevokeAdmin(nil, 1))
+}
+
+func TestRevokeAdmin_RevokeError(t *testing.T) {
+	svc := services.AccountService{Roles: stubRoleRepo{hasRole: true, adminCount: 2, roleID: 1, revokeErr: errors.New("db error")}}
+	assert.Error(t, svc.RevokeAdmin(nil, 1))
+}
+
+// --- DeletePending ---
+
+func TestDeletePending_Success(t *testing.T) {
+	svc := services.AccountService{
+		Accounts: stubAccountRepo{account: &models.Account{Status: "pending"}},
+		Roles:    stubRoleRepo{},
+	}
+	assert.NoError(t, svc.DeletePending(nil, 1))
+}
+
+func TestDeletePending_NotPending(t *testing.T) {
+	svc := services.AccountService{
+		Accounts: stubAccountRepo{account: &models.Account{Status: "active"}},
+		Roles:    stubRoleRepo{},
+	}
+	assert.ErrorIs(t, svc.DeletePending(nil, 1), services.ErrAccountNotPending)
+}
+
+func TestDeletePending_LastAdmin(t *testing.T) {
+	svc := services.AccountService{
+		Accounts: stubAccountRepo{account: &models.Account{Status: "pending"}},
+		Roles:    stubRoleRepo{hasRole: true, adminCount: 1},
+	}
+	assert.ErrorIs(t, svc.DeletePending(nil, 1), services.ErrLastAdmin)
+}
+
+func TestDeletePending_GetByIDError(t *testing.T) {
+	svc := services.AccountService{
+		Accounts: stubAccountRepo{err: errors.New("db error")},
+		Roles:    stubRoleRepo{},
+	}
+	assert.Error(t, svc.DeletePending(nil, 1))
+}
+
+func TestDeletePending_DeleteError(t *testing.T) {
+	svc := services.AccountService{
+		Accounts: stubAccountRepo{account: &models.Account{Status: "pending"}, deleteErr: errors.New("db error")},
+		Roles:    stubRoleRepo{},
+	}
+	assert.Error(t, svc.DeletePending(nil, 1))
+}
+
+// --- Error paths on already-tested methods ---
+
+func TestGeneratePasswordResetToken_InvalidateError(t *testing.T) {
+	svc := services.AccountService{ResetTokens: &stubResetTokenRepo{invalidateErr: errors.New("db error")}}
+	_, err := svc.GeneratePasswordResetToken(nil, 1, "https://ohm.test")
+	assert.Error(t, err)
+}
+
+func TestCompletePasswordReset_UpdateHashError(t *testing.T) {
+	svc := services.AccountService{
+		Accounts:    stubAccountRepo{err: errors.New("db error")},
+		ResetTokens: &stubResetTokenRepo{},
+	}
+	assert.Error(t, svc.CompletePasswordReset(nil, 20, 7, "newhash"))
+}
+
+func TestCompletePasswordReset_MarkUsedError(t *testing.T) {
+	svc := services.AccountService{
+		Accounts:    stubAccountRepo{},
+		ResetTokens: &stubResetTokenRepo{markUsedErr: errors.New("db error")},
+	}
+	assert.Error(t, svc.CompletePasswordReset(nil, 20, 7, "newhash"))
 }

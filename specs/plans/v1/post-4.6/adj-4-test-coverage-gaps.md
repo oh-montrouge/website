@@ -1,6 +1,6 @@
 # Adj-4 — Test Coverage Gaps
 
-**Status:** Draft
+**Status:** Complete
 
 **Goal:** Close the unit/integration test gaps that pull actions (63%), models (35%), and
 services (52%) below the expected near-100% coverage.
@@ -130,7 +130,7 @@ to insert raw rows if there is no Store factory for sessions.
 
 ---
 
-## Gap 3 — `services/event.go` (30%)
+## Gap 3 — `services/event.go` (30%) ✅ Done
 
 **File:** `webapp/services/event_test.go`
 **Currently tested:** Create, Update (all 5 type-change cases), UpdateRSVP (6 cases),
@@ -182,18 +182,289 @@ SeedRSVPsForAccount.
 
 ---
 
-## Secondary gaps (not requested, recorded for completeness)
+---
 
-These files have partial coverage but were not part of the focused analysis above.
-Review separately if coverage targets are set.
+## Gap 4 — `actions/events.go` (43%) ✅ Done
 
-| File | Coverage | Likely cause |
-|------|----------|--------------|
-| `actions/events.go` | 43% | Error paths and edge cases in RSVP/field handlers untested |
-| `services/account.go` | 63% | Several branches in CompleteInvite / UpdatePassword untested |
-| `actions/musicians.go` | 64% | Admin-only handlers not fully exercised |
-| `actions/tokens.go` | 75% | Reset/invite expiry/not-found paths missing |
-| `services/musician.go` | 68% | Some compliance/anonymization branches |
+**File:** `webapp/actions/events_test.go`
+**Currently tested:** Dashboard (3 cases), Index (1 case, no error path), Show (3 cases),
+UpdateRSVP (4 cases), New, Create (4 cases), Delete (2 cases), AdminUpdateRSVP (5 cases).
+**Missing — 6 handlers entirely untested + minor gaps on existing handlers:**
+
+### Untested handlers
+
+#### `Edit`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestEventsHandler_Edit_RendersForm` | 200; event name in body |
+| `TestEventsHandler_Edit_InvalidID` | non-numeric `:id` → 404 |
+| `TestEventsHandler_Edit_EventNotFound` | `detailErr = ErrEventNotFound` → 404 |
+
+#### `Update`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestEventsHandler_Update_Success` | 303 → `/admin/evenements` |
+| `TestEventsHandler_Update_InvalidID` | non-numeric `:id` → 404 |
+| `TestEventsHandler_Update_MissingName` | empty name → 422; event still set on context |
+| `TestEventsHandler_Update_InvalidDate` | bad date → 422; event still set on context |
+| `TestEventsHandler_Update_EventNotFound` | `updateErr = ErrEventNotFound` → 404 |
+
+Note: The 422 branches call `h.Events.GetDetail` to re-render the form; stub must return
+a non-nil `detail` for those cases.
+
+#### `AddField`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestEventsHandler_AddField_Success` | 303 → `/admin/evenements/1/modifier` |
+| `TestEventsHandler_AddField_InvalidID` | non-numeric `:id` → 400 |
+| `TestEventsHandler_AddField_FieldOnlyForOther` | `addFieldErr = ErrFieldOnlyForOther` → 303 (flash) |
+| `TestEventsHandler_AddField_ServiceError` | other error → 500 |
+
+#### `EditFieldForm`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestEventsHandler_EditFieldForm_RendersForm` | 200; field label in body |
+| `TestEventsHandler_EditFieldForm_InvalidFieldID` | non-numeric `field_id` → 404 |
+| `TestEventsHandler_EditFieldForm_InvalidEventID` | non-numeric `:id` → 404 |
+| `TestEventsHandler_EditFieldForm_FieldNotFound` | `fieldErr = ErrEventFieldNotFound` → 404 |
+
+#### `UpdateField`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestEventsHandler_UpdateField_Success` | 303; flash success |
+| `TestEventsHandler_UpdateField_FieldHasResponses` | `updateFieldErr = ErrFieldHasResponses` → 303 (flash) |
+| `TestEventsHandler_UpdateField_ServiceError` | other error → 500 |
+
+#### `DeleteField`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestEventsHandler_DeleteField_Success` | 303; flash success |
+| `TestEventsHandler_DeleteField_FieldHasResponses` | `deleteFieldErr = ErrFieldHasResponses` → 303 (flash) |
+| `TestEventsHandler_DeleteField_ServiceError` | other error → 500 |
+
+### Gaps on already-tested handlers
+
+| Test | Key assertions |
+|------|----------------|
+| `TestEventsHandler_Index_ServiceError` | `listErr = errors.New("db")` → 500 |
+| `TestEventsHandler_AdminUpdateRSVP_InvalidMusicianID` | non-numeric `musician_id` → 400 |
+| `TestEventsHandler_AdminUpdateRSVP_InvalidBody` | malformed JSON body → 400 |
+
+---
+
+## Gap 5 — `services/account.go` (63%) ✅ Done
+
+**File:** `webapp/services/account_test.go`
+**Currently tested:** Authenticate (6), CreateAdmin (2), ResetPassword (3),
+GenerateInviteToken (2), ValidateInviteToken (3), CompleteInvite (5),
+GeneratePasswordResetToken (1), ValidatePasswordResetToken (2),
+CompletePasswordReset (1), ValidatePasswordStrength (6).
+**Missing — 8 untested methods + error paths on tested methods:**
+
+**Stub note:** `stubRoleRepo.HasRole` is hardcoded `return false, nil`. Tests for
+`GrantAdmin` (already-has-role path) and `RevokeAdmin` (not-admin path) need a
+controllable `hasRole bool` field — extend the stub before writing those cases.
+
+### Thin delegating methods
+
+| Test | Key assertions |
+|------|----------------|
+| `TestGetByID_Success` | returns mapped `AccountDTO` |
+| `TestGetByID_Error` | propagates repo error |
+| `TestCreatePending_Success` | returns ID from repo |
+| `TestCreatePending_Error` | propagates repo error |
+| `TestGetActiveInviteToken_NotFound` | repo returns nil → service returns nil |
+| `TestGetActiveInviteToken_Found` | URL contains `/invitation/`; ExpiresAt propagated |
+| `TestGetActiveInviteToken_Error` | repo error propagated |
+| `TestGetActivePasswordResetToken_NotFound` | repo returns nil → service returns nil |
+| `TestGetActivePasswordResetToken_Found` | URL contains `/reinitialiser-mot-de-passe/` |
+| `TestGetActivePasswordResetToken_Error` | repo error propagated |
+
+### `GrantAdmin`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestGrantAdmin_AlreadyAdmin_Idempotent` | `HasRole = true` → returns nil, no AssignRole call |
+| `TestGrantAdmin_Success` | `HasRole = false` → GetIDByName + AssignRole called |
+| `TestGrantAdmin_HasRoleError` | HasRole error propagated |
+| `TestGrantAdmin_GetIDByNameError` | GetIDByName error propagated |
+| `TestGrantAdmin_AssignError` | AssignRole error propagated |
+
+### `RevokeAdmin`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestRevokeAdmin_NotAdmin_Idempotent` | `HasRole = false` → returns nil |
+| `TestRevokeAdmin_LastAdmin` | count ≤ 1 → `ErrLastAdmin` |
+| `TestRevokeAdmin_Success` | count > 1 → RevokeRole called |
+| `TestRevokeAdmin_HasRoleError` | propagated |
+| `TestRevokeAdmin_CountError` | propagated |
+| `TestRevokeAdmin_GetIDByNameError` | propagated |
+| `TestRevokeAdmin_RevokeError` | propagated |
+
+### `DeletePending`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestDeletePending_Success` | status=pending, not last admin → Delete called |
+| `TestDeletePending_NotPending` | status=active → `ErrAccountNotPending` |
+| `TestDeletePending_LastAdmin` | is admin, count ≤ 1 → `ErrLastAdmin` |
+| `TestDeletePending_GetByIDError` | GetByID error propagated |
+| `TestDeletePending_DeleteError` | Delete error propagated |
+
+### Error paths on already-tested methods
+
+| Test | Key assertions |
+|------|----------------|
+| `TestGeneratePasswordResetToken_InvalidateError` | InvalidateExisting error propagated |
+| `TestCompletePasswordReset_UpdateHashError` | UpdatePasswordHash error propagated |
+| `TestCompletePasswordReset_MarkUsedError` | MarkUsed error propagated |
+
+---
+
+## Gap 6 — `actions/musicians.go` (64%) ✅ Done
+
+**File:** `webapp/actions/musicians_test.go`
+**Currently tested:** Index (2), Show (2), Create (3), Delete (2), Anonymize (2),
+Edit (2), Update (2), GrantAdmin (1), RevokeAdmin (2), WithdrawConsent (1),
+ToggleProcessingRestriction (1), GenerateInviteLink (1), GenerateResetLink (1).
+**Missing — `New` handler entirely untested + error/edge-case paths across all handlers:**
+
+### `New` (not tested at all)
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_New_RendersForm` | 200; instrument list in context |
+| `TestMusiciansHandler_New_InstrumentsError` | Instruments.List error → 500 |
+
+### `Show`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_Show_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_Show_ProfileError` | GetProfile error → 500 |
+| `TestMusiciansHandler_Show_IsAdminError` | IsAdmin error → 500 |
+
+### `Create`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_Create_InvalidBirthDate` | unparseable date → 422; "invalide" in body |
+| `TestMusiciansHandler_Create_CreatePendingError` | CreatePending error → 422; error message in body |
+| `TestMusiciansHandler_Create_GenerateInviteTokenError` | GenerateInviteToken error → 500 |
+
+### `Edit`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_Edit_InvalidID` | non-numeric `:id` → 404 |
+
+### `Update`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_Update_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_Update_InvalidBirthDate` | unparseable date → 422 |
+| `TestMusiciansHandler_Update_InvalidInstrumentID` | non-numeric instrument_id → 422 |
+| `TestMusiciansHandler_Update_ServiceError` | non-parental UpdateProfile error → 422; error in body |
+
+### `Delete`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_Delete_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_Delete_LastAdmin` | `deleteErr = ErrLastAdmin` → 303 with flash |
+
+### `Anonymize`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_Anonymize_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_Anonymize_LastAdmin` | `anonymizeErr = ErrLastAdmin` → 303 with flash |
+
+### `GrantAdmin`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_GrantAdmin_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_GrantAdmin_ServiceError` | grantErr set → 303 with danger flash |
+
+### `RevokeAdmin`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_RevokeAdmin_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_RevokeAdmin_OtherError` | non-ErrLastAdmin revokeErr → 500 |
+
+### `GenerateInviteLink` / `GenerateResetLink`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_GenerateInviteLink_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_GenerateInviteLink_ServiceError` | inviteErr set → 500 |
+| `TestMusiciansHandler_GenerateResetLink_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_GenerateResetLink_ServiceError` | resetErr set → 500 |
+
+### `WithdrawConsent` / `ToggleProcessingRestriction`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestMusiciansHandler_WithdrawConsent_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_WithdrawConsent_ServiceError` | consentErr → 500 |
+| `TestMusiciansHandler_ToggleProcessingRestriction_InvalidID` | non-numeric `:id` → 404 |
+| `TestMusiciansHandler_ToggleProcessingRestriction_ServiceError` | toggleErr → 500 |
+
+---
+
+## Gap 7 — `actions/tokens.go` (75%) ✅ Done
+
+**File:** `webapp/actions/tokens_test.go`
+**Currently tested:** InviteForm (3), InviteSubmit (5), ResetForm (2), ResetSubmit (3).
+**Missing — 5 paths:**
+
+| Test | Key assertions |
+|------|----------------|
+| `TestTokensHandler_ResetForm_DBError` | non-ErrInvalidToken validateErr → 500 |
+| `TestTokensHandler_ResetSubmit_WeakPassword` | short password → 422; "caractères" in body |
+| `TestTokensHandler_ResetSubmit_DBError` | non-ErrInvalidToken validateErr → 500 |
+| `TestTokensHandler_ResetSubmit_CompleteError` | `completeErr = errors.New("db")` → 500 |
+| `TestTokensHandler_InviteSubmit_CompleteError` | `completeErr = errors.New("db")` → 500 |
+
+---
+
+## Gap 8 — `services/musician.go` (68%) ✅ Done
+
+**File:** `webapp/services/musician_test.go`
+**Currently tested:** SetInitialProfile (4 consent-rule cases), UpdateProfile (2 consent-rule
+cases), ConsentWithdrawal (2), ListNonAnonymized (1).
+**Missing — `GetProfile` and `ToggleProcessingRestriction` entirely untested, plus error paths:**
+
+### `GetProfile`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestGetProfile_Success_WithBirthDate` | `BirthDate.Valid = true` → `p.BirthDate` non-nil; all string fields mapped |
+| `TestGetProfile_Success_NoBirthDate` | `BirthDate.Valid = false` → `p.BirthDate` nil |
+| `TestGetProfile_Error` | repo error propagated; nil profile |
+
+### `ToggleProcessingRestriction`
+
+| Test | Key assertions |
+|------|----------------|
+| `TestToggleProcessingRestriction_Success` | no error |
+| `TestToggleProcessingRestriction_Error` | repo error propagated |
+
+### Error paths on already-tested methods
+
+| Test | Key assertions |
+|------|----------------|
+| `TestListNonAnonymized_Error` | repo error propagated; nil slice |
 
 ---
 
@@ -207,6 +478,12 @@ Review separately if coverage targets are set.
   table-driven, fast.
 - `models/session_test.go` may need direct SQL inserts into `http_sessions` if no Store
   factory exists for that table — check `truncateAll` scope first.
+- Gap 5 (`services/account.go`): extend `stubRoleRepo` with `hasRole bool` and
+  `hasRoleErr error` fields before writing `GrantAdmin`/`RevokeAdmin` tests —
+  `HasRole` is currently hardcoded `return false, nil`.
+- Gap 4 (`actions/events.go`): the `Update` 422 branches call `h.Events.GetDetail`
+  internally to populate the re-rendered form; ensure `stubEventManager.detail` is
+  non-nil in those test cases.
 
 ## Definition of Done
 

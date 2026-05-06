@@ -442,28 +442,14 @@ func TestMusiciansHandler_GrantAdmin_Success_Redirects(t *testing.T) {
 
 func TestMusiciansHandler_RevokeAdmin_Success_Redirects(t *testing.T) {
 	h := MusiciansHandler{Accounts: &stubAccountAdmin{}}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.DELETE("/admin/musiciens/{id}/role-admin", h.RevokeAdmin)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/admin/musiciens/1/role-admin", nil)
-	app.ServeHTTP(res, req)
-
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}/role-admin", "/admin/musiciens/1/role-admin", h.RevokeAdmin)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")
 }
 
 func TestMusiciansHandler_RevokeAdmin_LastAdmin_RedirectsWithFlash(t *testing.T) {
 	h := MusiciansHandler{Accounts: &stubAccountAdmin{revokeErr: services.ErrLastAdmin}}
-	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
-		a.DELETE("/admin/musiciens/{id}/role-admin", h.RevokeAdmin)
-	})
-
-	res := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodDelete, "/admin/musiciens/1/role-admin", nil)
-	app.ServeHTTP(res, req)
-
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}/role-admin", "/admin/musiciens/1/role-admin", h.RevokeAdmin)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")
 }
@@ -526,4 +512,266 @@ func TestMusiciansHandler_GenerateResetLink_Success_Redirects(t *testing.T) {
 
 	assert.Equal(t, http.StatusSeeOther, res.Code)
 	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")
+}
+
+// --- New ---
+
+func TestMusiciansHandler_New_RendersForm(t *testing.T) {
+	h := MusiciansHandler{Instruments: &stubInstruments{instruments: defaultInstruments()}}
+	res := runMusiciansGET(t, h, "/admin/musiciens/nouveau", "/admin/musiciens/nouveau", h.New)
+	assert.Equal(t, http.StatusOK, res.Code)
+	assert.Contains(t, res.Body.String(), "Clarinette")
+}
+
+func TestMusiciansHandler_New_InstrumentsError(t *testing.T) {
+	h := MusiciansHandler{Instruments: &stubInstruments{err: errors.New("db error")}}
+	res := runMusiciansGET(t, h, "/admin/musiciens/nouveau", "/admin/musiciens/nouveau", h.New)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+// --- Show error paths ---
+
+func TestMusiciansHandler_Show_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{}}
+	app := newMusiciansTestApp(h, func(a *buffalo.App, h MusiciansHandler) {
+		a.GET("/admin/musiciens/{id}", h.Show)
+	})
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/admin/musiciens/not-a-number", nil))
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_Show_ProfileError(t *testing.T) {
+	h := MusiciansHandler{
+		Accounts:   &stubAccountAdmin{account: &services.AccountDTO{ID: 1, Email: "test@example.com"}},
+		Membership: &stubMusicianProfile{profileErr: errors.New("db error")},
+	}
+	res := runMusiciansGET(t, h, "/admin/musiciens/{id}", "/admin/musiciens/1", h.Show)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+func TestMusiciansHandler_Show_IsAdminError(t *testing.T) {
+	h := MusiciansHandler{
+		Accounts:   &stubAccountAdmin{account: &services.AccountDTO{ID: 1}, isAdminErr: errors.New("db error")},
+		Membership: &stubMusicianProfile{profile: &services.MusicianProfile{AccountID: 1}},
+	}
+	res := runMusiciansGET(t, h, "/admin/musiciens/{id}", "/admin/musiciens/1", h.Show)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+// --- Create error paths ---
+
+const createMusicianBody = "first_name=Alice&last_name=Martin&email=alice%40example.com&main_instrument_id=1"
+
+func TestMusiciansHandler_Create_InvalidBirthDate(t *testing.T) {
+	h := MusiciansHandler{
+		Accounts:    &stubAccountAdmin{},
+		Membership:  &stubMusicianProfile{},
+		Instruments: &stubInstruments{instruments: defaultInstruments()},
+	}
+	res := runMusiciansPost(t, h, "/admin/musiciens", "/admin/musiciens",
+		createMusicianBody+"&birth_date=not-a-date", h.Create)
+	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
+	assert.Contains(t, res.Body.String(), "invalide")
+}
+
+func TestMusiciansHandler_Create_CreatePendingError(t *testing.T) {
+	h := MusiciansHandler{
+		Accounts:    &stubAccountAdmin{createErr: errors.New("duplicate email")},
+		Membership:  &stubMusicianProfile{},
+		Instruments: &stubInstruments{instruments: defaultInstruments()},
+	}
+	res := runMusiciansPost(t, h, "/admin/musiciens", "/admin/musiciens", createMusicianBody, h.Create)
+	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
+	assert.Contains(t, res.Body.String(), "duplicate email")
+}
+
+func TestMusiciansHandler_Create_GenerateInviteTokenError(t *testing.T) {
+	h := MusiciansHandler{
+		Accounts:    &stubAccountAdmin{createdID: 7, inviteErr: errors.New("token error")},
+		Membership:  &stubMusicianProfile{},
+		Instruments: &stubInstruments{instruments: defaultInstruments()},
+	}
+	res := runMusiciansPost(t, h, "/admin/musiciens", "/admin/musiciens", createMusicianBody, h.Create)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+// --- Edit error path ---
+
+func TestMusiciansHandler_Edit_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{}}
+	res := runMusiciansGET(t, h, "/admin/musiciens/{id}/modifier", "/admin/musiciens/not-a-number/modifier", h.Edit)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+// --- Update error paths ---
+
+func runMusiciansPut(t *testing.T, h MusiciansHandler, routeTemplate, path, body string, fn buffalo.Handler) *httptest.ResponseRecorder {
+	t.Helper()
+	app := newMusiciansTestApp(h, func(a *buffalo.App, _ MusiciansHandler) {
+		a.PUT(routeTemplate, fn)
+	})
+	req := httptest.NewRequest(http.MethodPut, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, req)
+	return res
+}
+
+func TestMusiciansHandler_Update_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{}}
+	res := runMusiciansPut(t, h, "/admin/musiciens/{id}", "/admin/musiciens/not-a-number",
+		"first_name=Alice&last_name=Martin&email=alice%40example.com&main_instrument_id=1", h.Update)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_Update_InvalidBirthDate(t *testing.T) {
+	account := &services.AccountDTO{ID: 1, Email: "alice@example.com", Status: services.StatusActive}
+	profile := &services.MusicianProfile{AccountID: 1}
+	h := MusiciansHandler{
+		Accounts:    &stubAccountAdmin{account: account},
+		Membership:  &stubMusicianProfile{profile: profile},
+		Instruments: &stubInstruments{instruments: defaultInstruments()},
+	}
+	res := runMusiciansPut(t, h, "/admin/musiciens/{id}", "/admin/musiciens/1",
+		"first_name=Alice&last_name=Martin&email=alice%40example.com&main_instrument_id=1&birth_date=not-a-date", h.Update)
+	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
+}
+
+func TestMusiciansHandler_Update_InvalidInstrumentID(t *testing.T) {
+	account := &services.AccountDTO{ID: 1, Email: "alice@example.com", Status: services.StatusActive}
+	profile := &services.MusicianProfile{AccountID: 1}
+	h := MusiciansHandler{
+		Accounts:    &stubAccountAdmin{account: account},
+		Membership:  &stubMusicianProfile{profile: profile},
+		Instruments: &stubInstruments{instruments: defaultInstruments()},
+	}
+	res := runMusiciansPut(t, h, "/admin/musiciens/{id}", "/admin/musiciens/1",
+		"first_name=Alice&last_name=Martin&email=alice%40example.com&main_instrument_id=notanumber", h.Update)
+	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
+}
+
+func TestMusiciansHandler_Update_ServiceError(t *testing.T) {
+	account := &services.AccountDTO{ID: 1, Email: "alice@example.com", Status: services.StatusActive}
+	profile := &services.MusicianProfile{AccountID: 1}
+	h := MusiciansHandler{
+		Accounts:    &stubAccountAdmin{account: account},
+		Membership:  &stubMusicianProfile{profile: profile, updateErr: errors.New("db failure")},
+		Instruments: &stubInstruments{instruments: defaultInstruments()},
+	}
+	res := runMusiciansPut(t, h, "/admin/musiciens/{id}", "/admin/musiciens/1",
+		"first_name=Alice&last_name=Martin&email=alice%40example.com&main_instrument_id=1", h.Update)
+	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
+	assert.Contains(t, res.Body.String(), "db failure")
+}
+
+// --- Delete error paths ---
+
+func TestMusiciansHandler_Delete_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{}}
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}", "/admin/musiciens/not-a-number", h.Delete)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_Delete_LastAdmin(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{deleteErr: services.ErrLastAdmin}}
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}", "/admin/musiciens/1", h.Delete)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")
+}
+
+// --- Anonymize error paths ---
+
+func TestMusiciansHandler_Anonymize_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Compliance: &stubCompliance{}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/anonymiser", "/admin/musiciens/not-a-number/anonymiser", "confirmed=ANONYMISER", h.Anonymize)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_Anonymize_LastAdmin(t *testing.T) {
+	h := MusiciansHandler{Compliance: &stubCompliance{anonymizeErr: services.ErrLastAdmin}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/anonymiser", "/admin/musiciens/1/anonymiser", "confirmed=ANONYMISER", h.Anonymize)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")
+}
+
+// --- GrantAdmin error paths ---
+
+func TestMusiciansHandler_GrantAdmin_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/role-admin", "/admin/musiciens/not-a-number/role-admin", "", h.GrantAdmin)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_GrantAdmin_ServiceError(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{grantErr: errors.New("db error")}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/role-admin", "/admin/musiciens/1/role-admin", "", h.GrantAdmin)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Contains(t, res.Header().Get("Location"), "/admin/musiciens/1")
+}
+
+// --- RevokeAdmin error paths ---
+
+func TestMusiciansHandler_RevokeAdmin_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{}}
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}/role-admin", "/admin/musiciens/not-a-number/role-admin", h.RevokeAdmin)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_RevokeAdmin_OtherError(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{revokeErr: errors.New("db error")}}
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}/role-admin", "/admin/musiciens/1/role-admin", h.RevokeAdmin)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+// --- GenerateInviteLink / GenerateResetLink error paths ---
+
+func TestMusiciansHandler_GenerateInviteLink_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/invitation", "/admin/musiciens/not-a-number/invitation", "", h.GenerateInviteLink)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_GenerateInviteLink_ServiceError(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{inviteErr: errors.New("db error")}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/invitation", "/admin/musiciens/1/invitation", "", h.GenerateInviteLink)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+func TestMusiciansHandler_GenerateResetLink_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/reinitialisation", "/admin/musiciens/not-a-number/reinitialisation", "", h.GenerateResetLink)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_GenerateResetLink_ServiceError(t *testing.T) {
+	h := MusiciansHandler{Accounts: &stubAccountAdmin{resetErr: errors.New("db error")}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/reinitialisation", "/admin/musiciens/1/reinitialisation", "", h.GenerateResetLink)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+// --- WithdrawConsent / ToggleProcessingRestriction error paths ---
+
+func TestMusiciansHandler_WithdrawConsent_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Membership: &stubMusicianProfile{}}
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}/consentement", "/admin/musiciens/not-a-number/consentement", h.WithdrawConsent)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_WithdrawConsent_ServiceError(t *testing.T) {
+	h := MusiciansHandler{Membership: &stubMusicianProfile{consentErr: errors.New("db error")}}
+	res := runMusiciansDelete(t, h, "/admin/musiciens/{id}/consentement", "/admin/musiciens/1/consentement", h.WithdrawConsent)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+func TestMusiciansHandler_ToggleProcessingRestriction_InvalidID(t *testing.T) {
+	h := MusiciansHandler{Membership: &stubMusicianProfile{}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/restriction", "/admin/musiciens/not-a-number/restriction", "", h.ToggleProcessingRestriction)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestMusiciansHandler_ToggleProcessingRestriction_ServiceError(t *testing.T) {
+	h := MusiciansHandler{Membership: &stubMusicianProfile{toggleErr: errors.New("db error")}}
+	res := runMusiciansPost(t, h, "/admin/musiciens/{id}/restriction", "/admin/musiciens/1/restriction", "", h.ToggleProcessingRestriction)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
 }

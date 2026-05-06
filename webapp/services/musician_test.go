@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gobuffalo/nulls"
 	"github.com/gobuffalo/pop/v6"
 	"github.com/stretchr/testify/assert"
 	"ohmontrouge/webapp/models"
@@ -149,4 +150,73 @@ func TestListNonAnonymized_MapsRows(t *testing.T) {
 	assert.Equal(t, int64(1), summaries[0].AccountID)
 	assert.Equal(t, "Clarinette", summaries[0].MainInstrumentName)
 	assert.True(t, summaries[0].IsAdmin)
+}
+
+func TestListNonAnonymized_Error(t *testing.T) {
+	stub := &stubMembershipRepo{listErr: errDBFailure}
+	svc := services.MembershipService{Membership: stub}
+
+	summaries, err := svc.ListNonAnonymized(nil)
+	assert.Nil(t, summaries)
+	assert.ErrorIs(t, err, errDBFailure)
+}
+
+// --- GetProfile ---
+
+func TestGetProfile_Success_WithBirthDate(t *testing.T) {
+	bt := time.Now().AddDate(-20, 0, 0)
+	stub := &stubMembershipRepo{
+		profileRow: &models.MusicianProfileRow{
+			ID:             1,
+			FirstName:      nulls.NewString("Alice"),
+			LastName:       nulls.NewString("Martin"),
+			InstrumentName: "Clarinette",
+			BirthDate:      nulls.NewTime(bt),
+		},
+	}
+	svc := services.MembershipService{Membership: stub}
+
+	p, err := svc.GetProfile(nil, 1)
+	assert.NoError(t, err)
+	assert.NotNil(t, p)
+	assert.Equal(t, "Alice", p.FirstName)
+	assert.NotNil(t, p.BirthDate)
+}
+
+func TestGetProfile_Success_NoBirthDate(t *testing.T) {
+	stub := &stubMembershipRepo{
+		profileRow: &models.MusicianProfileRow{
+			ID:             2,
+			InstrumentName: "Trompette",
+		},
+	}
+	svc := services.MembershipService{Membership: stub}
+
+	p, err := svc.GetProfile(nil, 2)
+	assert.NoError(t, err)
+	assert.NotNil(t, p)
+	assert.Nil(t, p.BirthDate)
+}
+
+func TestGetProfile_Error(t *testing.T) {
+	stub := &stubMembershipRepo{profileErr: errDBFailure}
+	svc := services.MembershipService{Membership: stub}
+
+	p, err := svc.GetProfile(nil, 1)
+	assert.Nil(t, p)
+	assert.ErrorIs(t, err, errDBFailure)
+}
+
+// --- ToggleProcessingRestriction ---
+
+func TestToggleProcessingRestriction_Success(t *testing.T) {
+	stub := &stubMembershipRepo{}
+	svc := services.MembershipService{Membership: stub}
+	assert.NoError(t, svc.ToggleProcessingRestriction(nil, 1))
+}
+
+func TestToggleProcessingRestriction_Error(t *testing.T) {
+	stub := &stubMembershipRepo{toggleErr: errDBFailure}
+	svc := services.MembershipService{Membership: stub}
+	assert.ErrorIs(t, svc.ToggleProcessingRestriction(nil, 1), errDBFailure)
 }

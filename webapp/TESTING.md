@@ -7,12 +7,13 @@
 | `models/` | Integration | testcontainers-go + plain `testing` | Real PostgreSQL (ephemeral container) |
 | `services/` | Unit | plain `testing` + stub repositories | No — stubs only |
 | `actions/` | Unit | `net/http/httptest` + plain `testing` | No — stubs only |
+| All app | End-to-end | Playwright | Real PostgreSQL (ephemeral container) |
 
 Models are the DB boundary; integration tests there verify SQL against a real engine. Services contain business rules; unit tests there verify logic with stubbed repositories. Actions are HTTP orchestration; unit tests there verify status codes and rendering.
 
 ---
 
-## Model integration tests (`models/`)
+## Model integration tests (`models/`) — Target 100% coverage
 
 Each `go test ./models/...` run starts a fresh `postgres:17-alpine` container via testcontainers-go, applies all migrations, runs the tests, then tears the container down. Docker daemon must be available.
 
@@ -30,7 +31,7 @@ func TestSomething(t *testing.T) {
 
 ---
 
-## Service unit tests (`services/`)
+## Service unit tests (`services/`) — Target 100% coverage
 
 Services depend on repository interfaces. Tests define a stub struct that implements the interface and returns fixed data — no DB, no container. Tests live in `package services_test`.
 
@@ -54,7 +55,7 @@ Pass `nil` for `*pop.Connection` — stubs ignore it.
 
 ---
 
-## Action unit tests (`actions/`)
+## Action unit tests (`actions/`) — Target 100% coverage
 
 Handlers declare repository dependencies as interfaces (defined in `services/repositories.go`). Tests inject stubs; production wiring in `app.go` passes the real store.
 
@@ -81,7 +82,7 @@ func TestWidgetsIndex_ReturnsWidgets(t *testing.T) {
 
 ---
 
-## End-to-end tests
+## End-to-end tests — Target "human-verified acceptance criterias"
 
 E2e tests live under `e2e/` at the repo root, implemented with **Playwright (TypeScript)**. See [ADR 010](../specs/technical-adrs/010-e2e-framework.md) for the framework choice.
 
