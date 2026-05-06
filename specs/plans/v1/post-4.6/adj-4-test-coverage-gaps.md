@@ -19,7 +19,7 @@ Correctly excluded.
 
 ---
 
-## Gap 1 — Missing test files (CLAUDE.md violation)
+## Gap 1 — Missing test files (CLAUDE.md violation) ✅ Done
 
 Three model files have no `*_test.go` at all. Each contains concrete method bodies on a
 `Store` type, so none qualifies for any exemption.
