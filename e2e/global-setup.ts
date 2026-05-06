@@ -64,7 +64,7 @@ export default async function globalSetup(): Promise<void> {
   fs.mkdirSync(path.join(ROOT, "coverage", "e2e"), { recursive: true });
   fs.mkdirSync(path.join(ROOT, "bin"), { recursive: true });
 
-  execSync("go build -cover -o ../bin/app-covered ./cmd/app", {
+  execSync("go build -cover -covermode=atomic -o ../bin/app-covered ./cmd/app", {
     cwd: WEBAPP_DIR,
     stdio: "inherit",
   });
