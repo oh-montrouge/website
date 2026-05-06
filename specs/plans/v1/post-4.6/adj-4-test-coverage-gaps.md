@@ -184,7 +184,7 @@ SeedRSVPsForAccount.
 
 ---
 
-## Gap 4 — `actions/events.go` (43%)
+## Gap 4 — `actions/events.go` (43%) ✅ Done
 
 **File:** `webapp/actions/events_test.go`
 **Currently tested:** Dashboard (3 cases), Index (1 case, no error path), Show (3 cases),
@@ -258,7 +258,7 @@ a non-nil `detail` for those cases.
 
 ---
 
-## Gap 5 — `services/account.go` (63%)
+## Gap 5 — `services/account.go` (63%) ✅ Done
 
 **File:** `webapp/services/account_test.go`
 **Currently tested:** Authenticate (6), CreateAdmin (2), ResetPassword (3),
@@ -328,7 +328,7 @@ controllable `hasRole bool` field — extend the stub before writing those cases
 
 ---
 
-## Gap 6 — `actions/musicians.go` (64%)
+## Gap 6 — `actions/musicians.go` (64%) ✅ Done
 
 **File:** `webapp/actions/musicians_test.go`
 **Currently tested:** Index (2), Show (2), Create (3), Delete (2), Anonymize (2),
@@ -422,7 +422,7 @@ ToggleProcessingRestriction (1), GenerateInviteLink (1), GenerateResetLink (1).
 
 ---
 
-## Gap 7 — `actions/tokens.go` (75%)
+## Gap 7 — `actions/tokens.go` (75%) ✅ Done
 
 **File:** `webapp/actions/tokens_test.go`
 **Currently tested:** InviteForm (3), InviteSubmit (5), ResetForm (2), ResetSubmit (3).
@@ -438,7 +438,7 @@ ToggleProcessingRestriction (1), GenerateInviteLink (1), GenerateResetLink (1).
 
 ---
 
-## Gap 8 — `services/musician.go` (68%)
+## Gap 8 — `services/musician.go` (68%) ✅ Done
 
 **File:** `webapp/services/musician_test.go`
 **Currently tested:** SetInitialProfile (4 consent-rule cases), UpdateProfile (2 consent-rule

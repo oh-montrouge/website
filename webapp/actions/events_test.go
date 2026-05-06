@@ -143,6 +143,8 @@ func runEventsGET(h EventsHandler, isAdmin bool, routeTemplate, path string, fn 
 	return res
 }
 
+// jscpd: unwanted abstraction — handler-specific form helpers share HTTP boilerplate; handler types differ, making a shared generic impractical
+// jscpd:ignore-start
 // runEventsPost builds the test app, registers handler at routeTemplate, and POSTs body to path.
 func runEventsPost(h EventsHandler, isAdmin bool, routeTemplate, path, body string, fn buffalo.Handler) *httptest.ResponseRecorder {
 	app := newEventsTestApp(h, defaultAccount(), isAdmin, func(a *buffalo.App) {
@@ -172,6 +174,20 @@ func runEventsDelete(h EventsHandler, isAdmin bool, routeTemplate, path, body st
 	app.ServeHTTP(res, req)
 	return res
 }
+
+// runEventsPut builds the test app, registers a PUT handler, and sends form body to path.
+func runEventsPut(h EventsHandler, isAdmin bool, routeTemplate, path, body string, fn buffalo.Handler) *httptest.ResponseRecorder {
+	app := newEventsTestApp(h, defaultAccount(), isAdmin, func(a *buffalo.App) {
+		a.PUT(routeTemplate, fn)
+	})
+	req := httptest.NewRequest(http.MethodPut, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	res := httptest.NewRecorder()
+	app.ServeHTTP(res, req)
+	return res
+}
+
+// jscpd:ignore-end
 
 // runEventsJSON builds the test app, registers a PATCH handler, and sends JSON payload to path.
 func runEventsJSON(h EventsHandler, isAdmin bool, routeTemplate, path string, payload []byte, fn buffalo.Handler) *httptest.ResponseRecorder {
@@ -369,4 +385,224 @@ func TestEventsHandler_AdminUpdateRSVP_InstrumentRequired(t *testing.T) {
 	payload, _ := json.Marshal(map[string]string{"state": "yes"})
 	res := runAdminUpdateRSVP(newEventsHandler(&stubEventManager{rsvpErr: services.ErrInstrumentRequired}), "/admin/evenements/1/rsvp/2", payload)
 	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
+}
+
+// --- Gaps on already-tested handlers ---
+
+func TestEventsHandler_Index_ServiceError(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{listErr: errors.New("db")})
+	res := runEventsGET(h, false, "/evenements", "/evenements", h.Index)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+func TestEventsHandler_AdminUpdateRSVP_InvalidMusicianID(t *testing.T) {
+	payload, _ := json.Marshal(map[string]string{"state": "yes"})
+	res := runAdminUpdateRSVP(newEventsHandler(&stubEventManager{}), "/admin/evenements/1/rsvp/not-a-number", payload)
+	assert.Equal(t, http.StatusBadRequest, res.Code)
+}
+
+func TestEventsHandler_AdminUpdateRSVP_InvalidBody(t *testing.T) {
+	res := runAdminUpdateRSVP(newEventsHandler(&stubEventManager{}), "/admin/evenements/1/rsvp/2", []byte("not-json"))
+	assert.Equal(t, http.StatusBadRequest, res.Code)
+}
+
+// --- Edit ---
+
+func TestEventsHandler_Edit_RendersForm(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{detail: &services.EventDetailDTO{
+		ID: 1, Name: "Concert de printemps", EventType: "concert", Datetime: time.Now().Add(30 * 24 * time.Hour),
+	}})
+	res := runEventsGET(h, true, "/admin/evenements/{id}/modifier", "/admin/evenements/1/modifier", h.Edit)
+	assert.Equal(t, http.StatusOK, res.Code)
+	assert.Contains(t, res.Body.String(), "Concert de printemps")
+}
+
+func TestEventsHandler_Edit_InvalidID(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsGET(h, true, "/admin/evenements/{id}/modifier", "/admin/evenements/not-a-number/modifier", h.Edit)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestEventsHandler_Edit_EventNotFound(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{detailErr: services.ErrEventNotFound})
+	res := runEventsGET(h, true, "/admin/evenements/{id}/modifier", "/admin/evenements/99/modifier", h.Edit)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+// --- Update ---
+
+func TestEventsHandler_Update_Success(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPut(h, true, "/admin/evenements/{id}", "/admin/evenements/1",
+		"name=Concert+de+printemps&date=2026-06-01&time=20:00&event_type=concert", h.Update)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Equal(t, "/admin/evenements", res.Header().Get("Location"))
+}
+
+func TestEventsHandler_Update_InvalidID(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPut(h, true, "/admin/evenements/{id}", "/admin/evenements/not-a-number",
+		"name=Concert&date=2026-06-01&time=20:00&event_type=concert", h.Update)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestEventsHandler_Update_MissingName(t *testing.T) {
+	detail := &services.EventDetailDTO{ID: 1, Name: "Concert", EventType: "concert", Datetime: time.Now()}
+	h := newEventsHandler(&stubEventManager{detail: detail})
+	res := runEventsPut(h, true, "/admin/evenements/{id}", "/admin/evenements/1",
+		"name=&date=2026-06-01&time=20:00&event_type=concert", h.Update)
+	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
+	assert.Contains(t, res.Body.String(), "nom")
+}
+
+func TestEventsHandler_Update_InvalidDate(t *testing.T) {
+	detail := &services.EventDetailDTO{ID: 1, Name: "Concert", EventType: "concert", Datetime: time.Now()}
+	h := newEventsHandler(&stubEventManager{detail: detail})
+	res := runEventsPut(h, true, "/admin/evenements/{id}", "/admin/evenements/1",
+		"name=Concert&date=not-a-date&time=20:00&event_type=concert", h.Update)
+	assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
+}
+
+func TestEventsHandler_Update_EventNotFound(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{updateErr: services.ErrEventNotFound})
+	res := runEventsPut(h, true, "/admin/evenements/{id}", "/admin/evenements/1",
+		"name=Concert&date=2026-06-01&time=20:00&event_type=concert", h.Update)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+// --- AddField ---
+
+func TestEventsHandler_AddField_Success(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, true, "/admin/evenements/{id}/champs", "/admin/evenements/1/champs",
+		"label=Ma+question&field_type=text&required=false&position=1", h.AddField)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Equal(t, "/admin/evenements/1/modifier", res.Header().Get("Location"))
+}
+
+func TestEventsHandler_AddField_InvalidID(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, true, "/admin/evenements/{id}/champs", "/admin/evenements/not-a-number/champs",
+		"label=Ma+question&field_type=text", h.AddField)
+	assert.Equal(t, http.StatusBadRequest, res.Code)
+}
+
+func TestEventsHandler_AddField_FieldOnlyForOther(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{addFieldErr: services.ErrFieldOnlyForOther})
+	res := runEventsPost(h, true, "/admin/evenements/{id}/champs", "/admin/evenements/1/champs",
+		"label=Ma+question&field_type=text", h.AddField)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Equal(t, "/admin/evenements/1/modifier", res.Header().Get("Location"))
+}
+
+func TestEventsHandler_AddField_ServiceError(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{addFieldErr: errors.New("db error")})
+	res := runEventsPost(h, true, "/admin/evenements/{id}/champs", "/admin/evenements/1/champs",
+		"label=Ma+question&field_type=text", h.AddField)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+// --- EditFieldForm ---
+
+func TestEventsHandler_EditFieldForm_RendersForm(t *testing.T) {
+	field := &services.EventFieldDTO{ID: 1, EventID: 1, Label: "Ma question", FieldType: "text", Position: 1}
+	h := newEventsHandler(&stubEventManager{field: field})
+	res := runEventsGET(h, true,
+		"/admin/evenements/{id}/champs/{field_id}/modifier",
+		"/admin/evenements/1/champs/1/modifier",
+		h.EditFieldForm)
+	assert.Equal(t, http.StatusOK, res.Code)
+	assert.Contains(t, res.Body.String(), "Ma question")
+}
+
+func TestEventsHandler_EditFieldForm_InvalidFieldID(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsGET(h, true,
+		"/admin/evenements/{id}/champs/{field_id}/modifier",
+		"/admin/evenements/1/champs/not-a-number/modifier",
+		h.EditFieldForm)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestEventsHandler_EditFieldForm_InvalidEventID(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsGET(h, true,
+		"/admin/evenements/{id}/champs/{field_id}/modifier",
+		"/admin/evenements/not-a-number/champs/1/modifier",
+		h.EditFieldForm)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+func TestEventsHandler_EditFieldForm_FieldNotFound(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{fieldErr: services.ErrEventFieldNotFound})
+	res := runEventsGET(h, true,
+		"/admin/evenements/{id}/champs/{field_id}/modifier",
+		"/admin/evenements/1/champs/99/modifier",
+		h.EditFieldForm)
+	assert.Equal(t, http.StatusNotFound, res.Code)
+}
+
+// --- UpdateField ---
+
+func TestEventsHandler_UpdateField_Success(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPut(h, true,
+		"/admin/evenements/{id}/champs/{field_id}",
+		"/admin/evenements/1/champs/2",
+		"label=Ma+question&field_type=text&required=false&position=1",
+		h.UpdateField)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Contains(t, res.Header().Get("Location"), "/admin/evenements/1/modifier")
+}
+
+func TestEventsHandler_UpdateField_FieldHasResponses(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{updateFieldErr: services.ErrFieldHasResponses})
+	res := runEventsPut(h, true,
+		"/admin/evenements/{id}/champs/{field_id}",
+		"/admin/evenements/1/champs/2",
+		"label=Ma+question&field_type=text",
+		h.UpdateField)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Contains(t, res.Header().Get("Location"), "/admin/evenements/1/modifier")
+}
+
+func TestEventsHandler_UpdateField_ServiceError(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{updateFieldErr: errors.New("db error")})
+	res := runEventsPut(h, true,
+		"/admin/evenements/{id}/champs/{field_id}",
+		"/admin/evenements/1/champs/2",
+		"label=Ma+question&field_type=text",
+		h.UpdateField)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
+}
+
+// --- DeleteField ---
+
+func TestEventsHandler_DeleteField_Success(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsDelete(h, true,
+		"/admin/evenements/{id}/champs/{field_id}",
+		"/admin/evenements/1/champs/2",
+		"", h.DeleteField)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Contains(t, res.Header().Get("Location"), "/admin/evenements/1/modifier")
+}
+
+func TestEventsHandler_DeleteField_FieldHasResponses(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{deleteFieldErr: services.ErrFieldHasResponses})
+	res := runEventsDelete(h, true,
+		"/admin/evenements/{id}/champs/{field_id}",
+		"/admin/evenements/1/champs/2",
+		"", h.DeleteField)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+	assert.Contains(t, res.Header().Get("Location"), "/admin/evenements/1/modifier")
+}
+
+func TestEventsHandler_DeleteField_ServiceError(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{deleteFieldErr: errors.New("db error")})
+	res := runEventsDelete(h, true,
+		"/admin/evenements/{id}/champs/{field_id}",
+		"/admin/evenements/1/champs/2",
+		"", h.DeleteField)
+	assert.Equal(t, http.StatusInternalServerError, res.Code)
 }
