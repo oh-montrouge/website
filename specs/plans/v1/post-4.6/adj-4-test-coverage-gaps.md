@@ -103,7 +103,7 @@ to insert raw rows if there is no Store factory for sessions.
 
 ---
 
-## Gap 2 — `models/account.go` (30%)
+## Gap 2 — `models/account.go` (30%) ✅ Done
 
 **File:** `webapp/models/account_test.go`
 **Currently tested:** `FindByEmail` (found + not-found), `GetByID` (found + not-found).
