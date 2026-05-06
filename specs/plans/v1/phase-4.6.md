@@ -1,6 +1,6 @@
 # Phase 4.6 — Events + RSVP
 
-**Status:** Not started
+**Status:** Complete
 
 **Goal:** event management with musician RSVPs; custom fields for open-form events.
 
