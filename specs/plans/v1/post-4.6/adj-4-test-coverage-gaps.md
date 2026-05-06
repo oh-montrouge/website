@@ -1,6 +1,6 @@
 # Adj-4 — Test Coverage Gaps
 
-**Status:** Draft
+**Status:** Complete
 
 **Goal:** Close the unit/integration test gaps that pull actions (63%), models (35%), and
 services (52%) below the expected near-100% coverage.
