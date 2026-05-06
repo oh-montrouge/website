@@ -224,9 +224,9 @@ Column mapping (same pattern for all three source tables):
 | NOM_CONCERT / NOM_REPET / NOM_EVENT | name | Repair encoding |
 | DATE_* + HEURE_* | datetime | Combine into TIMESTAMPTZ; assume Europe/Paris local time; convert to UTC (see ADR 002) |
 | — | event_type | Set per source table (above) |
+| HEURE_RDV, LIEU, TENUE, INFOS, PROGRAMME, NBRE_PLACE, ADRESSE, TARIF | description | Concatenate and convert HTML to markdown |
 
-**Dropped columns** (no equivalent in new model): HEURE_RDV, LIEU, ID_SAISON, TENUE, INFOS,
-PROGRAMME, NBRE_PLACE, ADRESSE, TARIF.
+**Dropped columns** (no equivalent in new model): ID_SAISON.
 
 ---
 

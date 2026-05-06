@@ -1,6 +1,6 @@
 # Adj-1 — Dashboard Redesign + Event Description
 
-**Status:** Not started
+**Status:** Complete
 
 **Goal:**
 1. Give `/tableau-de-bord` its own card-based template (currently shares `events/index.plush.html` with `/evenements`).

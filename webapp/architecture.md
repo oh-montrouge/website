@@ -1,6 +1,6 @@
 # OHM Webapp — Component Architecture
 
-Living document. Update this file when any structural change is made (new service, repository
+Living document. Update when any structural change is made (new service, repository
 interface, DTO, or handler file). See `CLAUDE.md` for the guardrail that requires it.
 
 ---
@@ -28,12 +28,12 @@ Dependency direction: `actions` → `services` → repository interfaces ← `mo
 Four conceptual sub-domains within the single deployment. Each context owns its vocabulary
 and its service. See `specs/architecture/context-map.md` for full detail.
 
-| Context | Service | DTO(s) | Owns |
-|---------|---------|--------|------|
-| Identity & Access | `AccountService` | `AccountDTO` | auth, credentials, tokens, roles, invite/reset flows |
-| Membership | `MembershipService` | `MusicianProfile`, `MusicianProfileSummary`, `RetentionEntryDTO` | musician profile, seasons, fee payments |
-| Event Coordination | `EventService` | `EventSummaryDTO`, `EventDetailDTO`, `RSVPRowDTO`, `EventFieldDTO` | events, RSVPs, custom fields |
-| Compliance | `ComplianceService` | — | anonymization, consent withdrawal, processing restriction, retention review |
+| Context | Service(s) | Owns |
+|---------|-----------|------|
+| Identity & Access | `AccountService` | auth, credentials, tokens, roles, invite/reset flows |
+| Membership | `MembershipService`, `SeasonService`, `FeePaymentService` | musician profile, seasons, fee payments |
+| Event Coordination | `EventService` | events, RSVPs, custom fields |
+| Compliance | `ComplianceService` | anonymization, consent withdrawal, processing restriction, retention review |
 
 `SeasonService` and `FeePaymentService` belong to the Membership context.
 
@@ -41,132 +41,45 @@ and its service. See `specs/architecture/context-map.md` for full detail.
 
 ## Services
 
-### AccountService (`services/account.go`)
-
-**Context:** Identity & Access
-
-**Status:** Phase 4.3 complete.
-
-| Method | Phase | Notes |
-|--------|-------|-------|
-| `Authenticate` | 2 | Argon2id verify; active-only; no account enumeration |
-| `GetByID` | 2 | Returns `AccountDTO` |
-| `IsAdmin` | 2 | Role check via `RoleRepository` |
-| `CreateAdmin` | 2 | Grift use only; refuses if active admin exists |
-| `ResetPassword` | 2 | Force-reset for grift use |
-| `CreatePending` | 4.3 ✅ | Admin creates musician; status=pending; no password |
-| `GenerateInviteToken` | 4.2 ✅ | CSPRNG token stored in `invite_tokens`; invalidates existing |
-| `ValidateInviteToken` | 4.2 ✅ | Checks unused+unexpired+pending account |
-| `CompleteInvite` | 4.2 ✅ | Activates account, sets password + consent, marks token used; gains EventRepository dep in 4.6 for RSVP seeding |
-| `GeneratePasswordResetToken` | 4.2 ✅ | Active accounts only; invalidates existing |
-| `ValidatePasswordResetToken` | 4.2 ✅ | Checks unused+unexpired+active account |
-| `CompletePasswordReset` | 4.2 ✅ | Updates password, marks token used |
-| `GetActiveInviteToken` | 4.3 ✅ | Returns active invite token DTO or nil |
-| `GetActivePasswordResetToken` | 4.3 ✅ | Returns active reset token DTO or nil |
-| `GrantAdmin` | 4.3 ✅ | Idempotent; no last-admin protection needed on grant |
-| `RevokeAdmin` | 4.3 ✅ | Last-admin protection check before mutation |
-| `DeletePending` | 4.3 ✅ | Rejects non-pending accounts; last-admin protection check |
+### AccountService (`services/account.go`) — Context: Identity & Access
 
 **Repository deps:** `AccountRepository`, `RoleRepository`, `InviteTokenRepository`,
-`PasswordResetTokenRepository`, `EventRepository` (4.6 only, for RSVP seeding).
+`PasswordResetTokenRepository`, `EventRepository` (RSVP seeding on invite completion only).
 
 ---
 
-### MembershipService (`services/musician.go`)
-
-**Context:** Membership
-
-**Status:** Phase 4.3 complete.
-
-| Method | Phase | Notes |
-|--------|-------|-------|
-| `GetProfile` | 4.3 ✅ | Returns `MusicianProfile` DTO |
-| `SetInitialProfile` | 4.3 ✅ | Called by handler on musician creation (after AccountService.CreatePending) |
-| `UpdateProfile` | 4.3 ✅ | Validates under-15 rule; phone/address only mutated when consent flag is set |
-| `ListNonAnonymized` | 4.3 ✅ | For musician list page; excludes anonymized accounts |
-| `ConsentWithdrawal` | 4.3 ✅ | Clears phone + address + consent flag |
-| `ToggleProcessingRestriction` | 4.3 ✅ | |
+### MembershipService (`services/musician.go`) — Context: Membership
 
 **Repository deps:** `MembershipRepository`
 
 ---
 
-### ComplianceService (`services/compliance.go`)
-
-**Context:** Compliance (cross-cutting)
-
-**Status:** Phase 4.3 complete.
-
-| Method | Phase | Notes |
-|--------|-------|-------|
-| `Anonymize` | 4.3 ✅ | Atomic: clear I&A fields + Membership fields + roles + tokens + sessions + RSVPs (4.6). Last-admin protection before any mutation. |
-| `RetentionReviewList` | 4.3 ✅ | Accounts past 5-year retention period |
+### ComplianceService (`services/compliance.go`) — Context: Compliance (cross-cutting)
 
 **Repository deps:** `AccountRepository`, `MembershipRepository`, `RoleRepository`,
-`InviteTokenRepository`, `PasswordResetTokenRepository`, `SessionRepository`,
-`EventRepository` (4.6 only, for RSVP deletion).
+`InviteTokenRepository`, `PasswordResetTokenRepository`, `SessionRepository`, `EventRepository`.
 
-**Rule:** ComplianceService is the only service that holds simultaneous dependencies on
-both `AccountRepository` and `MembershipRepository`. No other service may do this.
+**Rule:** ComplianceService is the only service permitted to hold simultaneous dependencies
+on both `AccountRepository` and `MembershipRepository`. No other service may do this.
 See `specs/technical-adrs/007-account-musician-dtos.md`.
 
 ---
 
-### SeasonService (`services/season.go`)
-
-**Context:** Membership
-
-**Status:** Phase 4.4 ✅
-
-| Method | Notes |
-|--------|-------|
-| `Create` | |
-| `List` | |
-| `DesignateCurrent` | Atomic swap; exactly-one invariant |
+### SeasonService (`services/season.go`) — Context: Membership
 
 **Repository deps:** `SeasonRepository`
 
 ---
 
-### FeePaymentService (`services/fee_payment.go`)
-
-**Context:** Membership
-
-**Status:** Phase 4.5 ✅
-
-| Method | Notes |
-|--------|-------|
-| `Record` | Duplicate guard: reject if (account, season) pair exists |
-| `Update` | |
-| `Delete` | |
-| `ListByAccount` | |
-| `GetByID` | For edit form |
-| `GetFirstInscriptionDate` | Derived: MIN(payment_date) |
+### FeePaymentService (`services/fee_payment.go`) — Context: Membership
 
 **Repository deps:** `FeePaymentRepository`
 
 ---
 
-### EventService (`services/event.go`) — Phase 4.6 ✅ + adj-1
+### EventService (`services/event.go`) — Context: Event Coordination
 
-**Context:** Event Coordination. Owns both events and RSVPs (no separate RSVPService).
-
-**Status:** Phase 4.6 ✅ + adj-1 (description field, dashboard template)
-
-| Method | Notes |
-|--------|-------|
-| `ListForMember` | Upcoming events (today included), with viewer's own RSVP state + description |
-| `ListAll` | All events past and future, with viewer's own RSVP state + description |
-| `GetDetail` | Full RSVP list + pupitre headcounts + custom fields |
-| `Create` | Accepts `description`; bulk RSVP seed for all active accounts on save |
-| `Update` | Accepts `description`; type-change RSVP effects applied atomically (see spec table) |
-| `Delete` | Cascades to RSVPs via DB FK |
-| `UpdateRSVP` | Validates instrument for concerts; clears field responses on state change |
-| `GetField` | Returns single field DTO for edit form |
-| `AddField` | `other` events only |
-| `UpdateField` | Blocked if responses exist |
-| `DeleteField` | Blocked if responses exist |
-| `SeedRSVPsForAccount` | Called by AccountService.CompleteInvite |
+Owns both events and RSVPs — no separate RSVPService. See Key Structural Decision #3.
 
 **Repository deps:** `EventRepository`, `RSVPRepository`
 
@@ -177,36 +90,19 @@ See `specs/technical-adrs/007-account-musician-dtos.md`.
 All repository interfaces are defined in `services/` (consumer side, per DIP). `models/`
 provides the production implementations. Tests inject stubs.
 
-### Existing
-
 | Interface | Implemented by |
 |-----------|---------------|
 | `InstrumentRepository` | `models.InstrumentStore` |
 | `AccountRepository` | `models.AccountStore` |
 | `SessionRepository` | `models.HTTPSessionStore` |
 | `RoleRepository` | `models.AccountRoleStore` |
-| `MembershipRepository` | `models.AccountStore` (Phase 4.3; same table, Membership methods) |
-
-**`AccountRepository` additions (Phase 4.2/4.3):**
-- `CreatePending(tx, email, instrumentID) → (int64, error)`
-- `Activate(tx, id, passwordHash string, phoneAddressConsent bool) → error` — single SQL
-  UPDATE that atomically sets `status='active'`, `password_hash`, `phone_address_consent`,
-  and conditionally clears `phone`/`address`
-
-**`MembershipRepository` (Phase 4.3 ✅):** Replaces the `any` placeholder. Methods:
-`GetProfile`, `SetProfile`, `UpdateProfile`, `ListNonAnonymized`, `ListForRetentionReview`,
-`ClearMembershipFields`, `WithdrawConsent`, `ToggleProcessingRestriction`
-
-### New interfaces
-
-| Interface | Phase | Implemented by |
-|-----------|-------|---------------|
-| `InviteTokenRepository` | 4.2 ✅ | `models.InviteTokenStore` |
-| `PasswordResetTokenRepository` | 4.2 ✅ | `models.PasswordResetTokenStore` |
-| `SeasonRepository` | 4.4 ✅ | `models.SeasonStore` |
-| `FeePaymentRepository` | 4.5 ✅ | `models.FeePaymentStore` |
-| `EventRepository` | 4.6 ✅ | `models.EventStore` |
-| `RSVPRepository` | 4.6 ✅ | `models.RSVPStore` |
+| `MembershipRepository` | `models.AccountStore` |
+| `InviteTokenRepository` | `models.InviteTokenStore` |
+| `PasswordResetTokenRepository` | `models.PasswordResetTokenStore` |
+| `SeasonRepository` | `models.SeasonStore` |
+| `FeePaymentRepository` | `models.FeePaymentStore` |
+| `EventRepository` | `models.EventStore` |
+| `RSVPRepository` | `models.RSVPStore` |
 
 ---
 
@@ -215,88 +111,18 @@ provides the production implementations. Tests inject stubs.
 One handler struct per file. Struct holds service interface dependencies. Route
 registration in `app.go`.
 
-| File | Phase | Handler struct | Service deps |
-|------|-------|---------------|--------------|
-| `auth.go` | 2 | `AuthHandler` | `AccountAuthenticator`, `SessionRepository` |
-| `middleware.go` | 2 | — | `AccountAuthenticator` |
-| `home.go` | 2/4.1 | `HomeHandler` | — |
-| `tokens.go` | 4.2 ✅ | `TokensHandler` | `AccountTokenManager`, `SessionRepository` |
-| `musicians.go` | 4.3 ✅ | `MusiciansHandler` | `AccountAdminManager`, `MusicianProfileManager`, `ComplianceManager`, `InstrumentRepository`, `FeePaymentManager` (4.5 ✅), `SeasonManager` (4.5 ✅) |
-| `profile.go` | 4.3 ✅ | `ProfileHandler` | `MusicianProfileManager` |
-| `retention.go` | 4.3 ✅ | `RetentionHandler` | `ComplianceManager` |
-| `seasons.go` | 4.4 ✅ | `SeasonsHandler` | `SeasonService` |
-| `fee_payments.go` | 4.5 ✅ | `FeePaymentsHandler` | `FeePaymentService` |
-| `events.go` | 4.6 ✅ | `EventsHandler` | `EventService`, `InstrumentRepository`, `MusicianProfileManager` |
-
----
-
-## DTOs (`services/`)
-
-Sensitive fields (`PasswordHash`, `AnonymizationToken`) are absent from all DTOs by
-construction. See `specs/technical-adrs/007-account-musician-dtos.md`.
-
-| DTO | File | Context | Fields |
-|-----|------|---------|--------|
-| `AccountDTO` | `account.go` | I&A | ID, Email, Status |
-| `InviteTokenDTO` | `account.go` | I&A | Token, URL, ExpiresAt |
-| `PasswordResetTokenDTO` | `account.go` | I&A | Token, URL, ExpiresAt |
-| `InviteContextDTO` | `account.go` | I&A | TokenID, AccountID, FirstName, LastName, Email, InstrumentName |
-| `PasswordResetContextDTO` | `account.go` | I&A | TokenID, AccountID |
-| `MusicianProfile` | `musician.go` | Membership | AccountID + all profile fields |
-| `MusicianProfileSummary` | `musician.go` | Membership | AccountID, Name, Instrument, Status |
-| `RetentionEntryDTO` | `musician.go` | Membership | AccountID, Name, Instrument, LastSeasonLabel, LastSeasonEndDate |
-| `SeasonDTO` | `season.go` | Membership | ID, Label, StartDate, EndDate, IsCurrent |
-| `FeePaymentDTO` | `fee_payment.go` | Membership | ID, AccountID, SeasonID, SeasonLabel, PaymentDate, Amount, PaymentType, Comment |
-| `EventSummaryDTO` | `event.go` | Event Coordination | ID, Name, EventType, Datetime, RSVPState, Description |
-| `EventDetailDTO` | `event.go` | Event Coordination | + full RSVP list, custom fields |
-| `RSVPRowDTO` | `event.go` | Event Coordination | AccountID, DisplayName, State, InstrumentID, InstrumentName, MainInstrument, FieldResponses |
-| `EventFieldDTO` | `event.go` | Event Coordination | ID, Label, FieldType, Required, Position, Choices |
-
----
-
-## Template Structure (`templates/`)
-
-Established in Phase 4.1. Convention: `templates/{area}/{action}.plush.html`.
-
-```
-templates/
-  layouts/
-    application.plush.html     ← auth-aware base layout (Phase 4.1)
-  home/
-    index.plush.html
-  privacy/
-    index.plush.html
-  auth/
-    login.plush.html           ← existing
-  tokens/
-    invite.plush.html
-    invite_invalid.plush.html
-    reset.plush.html
-    reset_invalid.plush.html
-  profile/
-    show.plush.html
-  events/
-    dashboard.plush.html  ← /tableau-de-bord card layout (adj-1)
-    index.plush.html
-    show.plush.html
-  admin/
-    index.plush.html           ← existing
-    musicians/
-      index.plush.html
-      new.plush.html
-      show.plush.html
-      edit.plush.html
-    seasons/
-      index.plush.html
-    events/
-      index.plush.html
-      new.plush.html
-      edit.plush.html
-    retention/
-      index.plush.html
-    cotisations/
-      edit.plush.html
-```
+| File | Handler struct | Service deps |
+|------|---------------|--------------|
+| `auth.go` | `AuthHandler` | `AccountAuthenticator`, `SessionRepository` |
+| `middleware.go` | — | `AccountAuthenticator` |
+| `home.go` | `HomeHandler` | — |
+| `tokens.go` | `TokensHandler` | `AccountTokenManager`, `SessionRepository` |
+| `musicians.go` | `MusiciansHandler` | `AccountAdminManager`, `MusicianProfileManager`, `ComplianceManager`, `InstrumentRepository`, `FeePaymentManager`, `SeasonManager` |
+| `profile.go` | `ProfileHandler` | `MusicianProfileManager` |
+| `retention.go` | `RetentionHandler` | `ComplianceManager` |
+| `seasons.go` | `SeasonsHandler` | `SeasonService` |
+| `fee_payments.go` | `FeePaymentsHandler` | `FeePaymentService` |
+| `events.go` | `EventsHandler` | `EventService`, `InstrumentRepository`, `MusicianProfileManager` |
 
 ---
 
@@ -308,21 +134,49 @@ Introduce a DTO when any of these apply:
 - **Display transformation needed** — e.g. UTC datetime → Europe/Paris; computed or formatted labels
 - **Post-anonymization display** — `FeePayment` renders a name or an anonymization token depending on account state
 
-Passing a model struct directly to a template is acceptable only when all hold: no sensitive fields, no display transformation, 1:1 with DB columns. `Instrument` (ID + Name, read-only reference data) is the canonical example.
+Passing a model struct directly to a template is acceptable only when all hold: no sensitive
+fields, no display transformation, 1:1 with DB columns. `Instrument` (ID + Name, read-only
+reference data) is the canonical example.
+
+Sensitive fields (`PasswordHash`, `AnonymizationToken`) are absent from all DTOs by
+construction. See `specs/technical-adrs/007-account-musician-dtos.md`.
+
+---
+
+## Template Structure (`templates/`)
+
+Convention: `templates/{area}/{action}.plush.html`.
+
+```
+templates/
+  layouts/
+    application.plush.html
+  home/
+  privacy/
+  auth/
+  tokens/
+  profile/
+  events/
+    dashboard.plush.html    ← /tableau-de-bord card layout
+    index.plush.html
+    show.plush.html
+  admin/
+    musicians/
+    seasons/
+    events/
+    retention/
+    cotisations/
+```
 
 ---
 
 ## Template Helpers (`actions/render.go`)
 
-Registered as Plush helpers alongside the render engine init.
+Helpers registered alongside the render engine init. Inspect `render.go` for the current list.
 
-| Helper | Since | Returns | Notes |
-|--------|-------|---------|-------|
-| `currentYear` | Phase 4.1 | `int` | Current calendar year for footer |
-| `fmtAmount` | Phase 4.5 | `string` | Two-decimal float formatting |
-| `toJSON` | Phase 4.6 | `string` | JSON-encodes a value for Alpine.js `data-*` attributes |
-| `itoa` | Phase 4.6 | `string` | `int64` → decimal string |
-| `markdownToHTML` | adj-1 | `template.HTML` | Converts user-supplied markdown to safe HTML via goldmark. **XSS invariant:** goldmark is never configured with `WithUnsafe()`; raw HTML in input is stripped. Return type is `template.HTML` — Plush will not double-escape it. See ADR-009. |
+**XSS invariant:** `markdownToHTML` uses goldmark, never configured with `WithUnsafe()`.
+Raw HTML in user input is stripped. Return type is `template.HTML` — Plush will not
+double-escape it. See ADR-009.
 
 ---
 
@@ -330,9 +184,9 @@ Registered as Plush helpers alongside the render engine init.
 
 ### 1 — Handler-level composition for multi-context writes
 
-Operations that span I&A + Membership (e.g. musician creation) are sequenced at the
-handler level as multiple service calls. All share the same Pop transaction provided by
-middleware. Services never call each other.
+Operations spanning I&A + Membership (e.g. musician creation) are sequenced at the handler
+level as multiple service calls. All share the same Pop transaction provided by middleware.
+Services never call each other.
 
 Example — musician creation:
 ```

@@ -1,6 +1,6 @@
 # Phase 4.4 — Season Management
 
-**Status:** Not started
+**Status:** Complete
 
 **Goal:** admins can create seasons and designate the current one without PhPMyAdmin access.
 
