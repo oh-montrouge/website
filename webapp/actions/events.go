@@ -31,7 +31,7 @@ func (h EventsHandler) Dashboard(c buffalo.Context) error {
 	}
 	c.Set("events", events)
 	c.Set("eventsEmpty", len(events) == 0)
-	return c.Render(http.StatusOK, r.HTML("events/index.plush.html"))
+	return c.Render(http.StatusOK, r.HTML("events/dashboard.plush.html"))
 }
 
 // Index renders /evenements — all events with own RSVP state.
@@ -158,7 +158,7 @@ func (h EventsHandler) New(c buffalo.Context) error {
 
 // Create handles POST /admin/evenements — create event and seed RSVPs.
 func (h EventsHandler) Create(c buffalo.Context) error {
-	name, dateStr, timeStr, eventType, formErr := parseEventForm(c)
+	name, dateStr, timeStr, eventType, description, formErr := parseEventForm(c)
 	if formErr != "" {
 		c.Set("formError", formErr)
 		return c.Render(http.StatusUnprocessableEntity, r.HTML("admin/events/new.plush.html"))
@@ -171,12 +171,12 @@ func (h EventsHandler) Create(c buffalo.Context) error {
 	}
 
 	tx := c.Value("tx").(*pop.Connection)
-	if err := h.Events.Create(tx, name, eventType, dt); err != nil {
+	if err := h.Events.Create(tx, name, eventType, description, dt); err != nil {
 		return err
 	}
 
 	c.Flash().Add("success", "Événement créé.")
-	return c.Redirect(http.StatusSeeOther, "/admin/evenements")
+	return c.Redirect(http.StatusSeeOther, "/evenements")
 }
 
 // Edit renders /admin/evenements/{id}/modifier — edit event form.
@@ -205,7 +205,7 @@ func (h EventsHandler) Update(c buffalo.Context) error {
 		return c.Error(http.StatusNotFound, err)
 	}
 
-	name, dateStr, timeStr, eventType, formErr := parseEventForm(c)
+	name, dateStr, timeStr, eventType, description, formErr := parseEventForm(c)
 	if formErr != "" {
 		tx := c.Value("tx").(*pop.Connection)
 		account := c.Value("current_account").(*services.AccountDTO)
@@ -226,7 +226,7 @@ func (h EventsHandler) Update(c buffalo.Context) error {
 	}
 
 	tx := c.Value("tx").(*pop.Connection)
-	if err := h.Events.Update(tx, id, name, eventType, dt); err != nil {
+	if err := h.Events.Update(tx, id, name, eventType, description, dt); err != nil {
 		if errors.Is(err, services.ErrEventNotFound) {
 			return c.Error(http.StatusNotFound, err)
 		}
@@ -234,14 +234,14 @@ func (h EventsHandler) Update(c buffalo.Context) error {
 	}
 
 	c.Flash().Add("success", "Événement mis à jour.")
-	return c.Redirect(http.StatusSeeOther, "/admin/evenements")
+	return c.Redirect(http.StatusSeeOther, "/evenements")
 }
 
 // Delete handles DELETE /admin/evenements/{id} — delete event and all RSVPs.
 func (h EventsHandler) Delete(c buffalo.Context) error {
 	if c.Request().FormValue("confirmed") != "true" {
 		c.Flash().Add("danger", "Suppression non confirmée.")
-		return c.Redirect(http.StatusSeeOther, "/admin/evenements")
+		return c.Redirect(http.StatusSeeOther, "/evenements")
 	}
 
 	id, err := parseID(c)
@@ -255,7 +255,7 @@ func (h EventsHandler) Delete(c buffalo.Context) error {
 	}
 
 	c.Flash().Add("success", "Événement supprimé.")
-	return c.Redirect(http.StatusSeeOther, "/admin/evenements")
+	return c.Redirect(http.StatusSeeOther, "/evenements")
 }
 
 // AddField handles POST /admin/evenements/{id}/champs.
@@ -418,11 +418,12 @@ func parseFieldFormValues(c buffalo.Context) (label, fieldType string, required 
 	return
 }
 
-func parseEventForm(c buffalo.Context) (name, dateStr, timeStr, eventType, formErr string) {
+func parseEventForm(c buffalo.Context) (name, dateStr, timeStr, eventType, description, formErr string) {
 	name = strings.TrimSpace(c.Request().FormValue("name"))
 	dateStr = c.Request().FormValue("date")
 	timeStr = c.Request().FormValue("time")
 	eventType = strings.TrimSpace(c.Request().FormValue("event_type"))
+	description = strings.TrimSpace(c.Request().FormValue("description"))
 
 	if name == "" {
 		formErr = "Le nom est requis."

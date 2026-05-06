@@ -43,16 +43,13 @@ func (s *stubEventManager) ListForMember(_ *pop.Connection, _ int64) ([]services
 func (s *stubEventManager) ListAll(_ *pop.Connection, _ int64) ([]services.EventSummaryDTO, error) {
 	return s.summaries, s.listErr
 }
-func (s *stubEventManager) AdminListAll(_ *pop.Connection) ([]services.EventSummaryDTO, error) {
-	return s.summaries, s.listErr
-}
 func (s *stubEventManager) GetDetail(_ *pop.Connection, _, _ int64) (*services.EventDetailDTO, error) {
 	return s.detail, s.detailErr
 }
-func (s *stubEventManager) Create(_ *pop.Connection, _, _ string, _ time.Time) error {
+func (s *stubEventManager) Create(_ *pop.Connection, _, _, _ string, _ time.Time) error {
 	return s.createErr
 }
-func (s *stubEventManager) Update(_ *pop.Connection, _ int64, _, _ string, _ time.Time) error {
+func (s *stubEventManager) Update(_ *pop.Connection, _ int64, _, _, _ string, _ time.Time) error {
 	return s.updateErr
 }
 func (s *stubEventManager) Delete(_ *pop.Connection, _ int64) error { return s.deleteErr }
@@ -226,6 +223,24 @@ func TestEventsHandler_Dashboard_ServiceError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, res.Code)
 }
 
+func TestEventsHandler_Dashboard_UsesDashboardTemplate(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{summaries: []services.EventSummaryDTO{
+		{ID: 1, Name: "Concert de gala", EventType: "concert", Datetime: time.Now().Add(7 * 24 * time.Hour), RSVPState: "yes"},
+	}})
+	res := runEventsGET(h, false, "/tableau-de-bord", "/tableau-de-bord", h.Dashboard)
+	assert.Equal(t, http.StatusOK, res.Code)
+	assert.NotContains(t, res.Body.String(), `aria-label="Liste des événements"`, "dashboard must not render the events table")
+}
+
+func TestEventsHandler_Dashboard_RendersDescription(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{summaries: []services.EventSummaryDTO{
+		{ID: 1, Name: "Concert", EventType: "concert", Datetime: time.Now().Add(7 * 24 * time.Hour), RSVPState: "yes", Description: "**Gala** de printemps"},
+	}})
+	res := runEventsGET(h, false, "/tableau-de-bord", "/tableau-de-bord", h.Dashboard)
+	assert.Equal(t, http.StatusOK, res.Code)
+	assert.Contains(t, res.Body.String(), "<strong>Gala</strong>")
+}
+
 // --- Index ---
 
 func TestEventsHandler_Index_RendersList(t *testing.T) {
@@ -309,7 +324,21 @@ func TestEventsHandler_Create_Success(t *testing.T) {
 	res := runEventsPost(h, true, "/admin/evenements", "/admin/evenements",
 		"name=Concert+de+printemps&date=2026-06-01&time=20:00&event_type=concert", h.Create)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
-	assert.Equal(t, "/admin/evenements", res.Header().Get("Location"))
+	assert.Equal(t, "/evenements", res.Header().Get("Location"))
+}
+
+func TestEventsHandler_Create_WithDescription(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, true, "/admin/evenements", "/admin/evenements",
+		"name=Concert&date=2026-06-01&time=20:00&event_type=concert&description=**Gala**", h.Create)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
+}
+
+func TestEventsHandler_Create_WithoutDescription(t *testing.T) {
+	h := newEventsHandler(&stubEventManager{})
+	res := runEventsPost(h, true, "/admin/evenements", "/admin/evenements",
+		"name=Concert&date=2026-06-01&time=20:00&event_type=concert", h.Create)
+	assert.Equal(t, http.StatusSeeOther, res.Code)
 }
 
 func TestEventsHandler_Create_MissingName(t *testing.T) {
@@ -340,7 +369,7 @@ func TestEventsHandler_Delete_Success(t *testing.T) {
 	h := newEventsHandler(&stubEventManager{})
 	res := runEventsDelete(h, true, "/admin/evenements/{id}", "/admin/evenements/1", "confirmed=true", h.Delete)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
-	assert.Equal(t, "/admin/evenements", res.Header().Get("Location"))
+	assert.Equal(t, "/evenements", res.Header().Get("Location"))
 }
 
 func TestEventsHandler_Delete_NotConfirmed(t *testing.T) {
@@ -436,7 +465,7 @@ func TestEventsHandler_Update_Success(t *testing.T) {
 	res := runEventsPut(h, true, "/admin/evenements/{id}", "/admin/evenements/1",
 		"name=Concert+de+printemps&date=2026-06-01&time=20:00&event_type=concert", h.Update)
 	assert.Equal(t, http.StatusSeeOther, res.Code)
-	assert.Equal(t, "/admin/evenements", res.Header().Get("Location"))
+	assert.Equal(t, "/evenements", res.Header().Get("Location"))
 }
 
 func TestEventsHandler_Update_InvalidID(t *testing.T) {

@@ -1,8 +1,10 @@
 package actions
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"strconv"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"ohmontrouge/webapp/templates"
 
 	"github.com/gobuffalo/buffalo/render"
+	"github.com/yuin/goldmark"
 )
 
 var r *render.Engine
@@ -26,7 +29,19 @@ func init() {
 				b, _ := json.Marshal(v)
 				return string(b)
 			},
-			"itoa": func(i int64) string { return strconv.FormatInt(i, 10) },
+			"itoa":           func(i int64) string { return strconv.FormatInt(i, 10) },
+			"markdownToHTML": markdownToHTML,
 		},
 	})
+}
+
+// markdownToHTML converts user-supplied markdown to safe HTML.
+// XSS safety: goldmark strips raw HTML by default; WithUnsafe() is never enabled.
+func markdownToHTML(s string) template.HTML {
+	if s == "" {
+		return ""
+	}
+	var buf bytes.Buffer
+	goldmark.Convert([]byte(s), &buf) //nolint:errcheck // bytes.Buffer.Write never errors
+	return template.HTML(buf.String())
 }

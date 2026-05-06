@@ -43,7 +43,7 @@
                     </div>
                 </div>
 
-                <div class="field" style="margin-bottom:var(--sp-5)">
+                <div class="field" style="margin-bottom:var(--sp-4)">
                     <label class="field__label" for="event-type">
                         Type <span class="req" aria-hidden="true">*</span>
                     </label>
@@ -53,6 +53,13 @@
                         <option value="concert">Concert</option>
                         <option value="other">Autre</option>
                     </select>
+                </div>
+
+                <div class="field" style="margin-bottom:var(--sp-5)">
+                    <label class="field__label" for="event-description">Description</label>
+                    <textarea class="textarea" id="event-description" name="description"
+                              rows="4" aria-describedby="event-description-hint"></textarea>
+                    <span class="field__hint" id="event-description-hint">Markdown supporté (gras, italique, listes…)</span>
                 </div>
 
                 <div style="display:flex;gap:var(--sp-3)">

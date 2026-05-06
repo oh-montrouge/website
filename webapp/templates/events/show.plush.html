@@ -71,6 +71,12 @@
         <% } %>
     </div>
 
+    <%= if (event.Description != "") { %>
+    <div class="prose" style="margin-bottom:var(--sp-6)">
+        <%= markdownToHTML(event.Description) %>
+    </div>
+    <% } %>
+
     <div class="split split--sidebar-first-mobile">
         <!-- Main: RSVP list -->
         <div>

@@ -16,27 +16,30 @@ import (
 // --- EventRepository stub ---
 
 type stubEventRepoE struct {
-	event           *models.EventDetailRow
-	eventID         int64
-	err             error
-	fieldID         int64
-	fieldErr        error
-	field           *models.EventFieldRow
-	countResp       int
-	deleted         bool
-	updated         bool
-	listRows        []models.EventListRow
-	fieldRows       []models.EventFieldRow
-	fieldChoiceRows []models.EventFieldChoiceRow
+	event               *models.EventDetailRow
+	eventID             int64
+	err                 error
+	fieldID             int64
+	fieldErr            error
+	field               *models.EventFieldRow
+	countResp           int
+	deleted             bool
+	updated             bool
+	listRows            []models.EventListRow
+	capturedDescription string
+	fieldRows           []models.EventFieldRow
+	fieldChoiceRows     []models.EventFieldChoiceRow
 }
 
-func (s *stubEventRepoE) Create(_ *pop.Connection, _, _ string, _ time.Time) (int64, error) {
+func (s *stubEventRepoE) Create(_ *pop.Connection, _, _, description string, _ time.Time) (int64, error) {
+	s.capturedDescription = description
 	return s.eventID, s.err
 }
 func (s *stubEventRepoE) GetByID(_ *pop.Connection, _ int64) (*models.EventDetailRow, error) {
 	return s.event, s.err
 }
-func (s *stubEventRepoE) Update(_ *pop.Connection, _ int64, _, _ string, _ time.Time) error {
+func (s *stubEventRepoE) Update(_ *pop.Connection, _ int64, _, _, description string, _ time.Time) error {
+	s.capturedDescription = description
 	s.updated = true
 	return s.err
 }
@@ -133,7 +136,7 @@ func TestEventService_Create_SeedsRSVPs(t *testing.T) {
 		Events: &stubEventRepoE{eventID: 42},
 		RSVPs:  rsvps,
 	}
-	err := svc.Create(nil, "Concert de printemps", "concert", time.Now())
+	err := svc.Create(nil, "Concert de printemps", "concert", "", time.Now())
 	assert.NoError(t, err)
 	assert.True(t, rsvps.seeded, "SeedForEvent should have been called")
 }
@@ -144,7 +147,7 @@ func TestEventService_Create_PropagatesRepoError(t *testing.T) {
 		Events: &stubEventRepoE{err: repoErr},
 		RSVPs:  &stubRSVPRepoE{},
 	}
-	err := svc.Create(nil, "Concert", "concert", time.Now())
+	err := svc.Create(nil, "Concert", "concert", "", time.Now())
 	assert.ErrorIs(t, err, repoErr)
 }
 
@@ -155,7 +158,7 @@ func TestEventService_Update_RehearsalToConcert_ResetsYesRSVPs(t *testing.T) {
 	events := &stubEventRepoE{event: &models.EventDetailRow{ID: 1, EventType: "rehearsal"}}
 	svc := services.EventService{Events: events, RSVPs: rsvps}
 
-	err := svc.Update(nil, 1, "Event", "concert", time.Now())
+	err := svc.Update(nil, 1, "Event", "concert", "", time.Now())
 	assert.NoError(t, err)
 	assert.True(t, rsvps.resetYes, "ResetYesRSVPs should have been called")
 	assert.False(t, events.deleted, "DeleteFields should not be called")
@@ -168,7 +171,7 @@ func TestEventService_Update_OtherToConcert_DeletesFieldsAndResetsYes(t *testing
 	events := &stubEventRepoE{event: &models.EventDetailRow{ID: 1, EventType: "other"}}
 	svc := services.EventService{Events: events, RSVPs: rsvps}
 
-	err := svc.Update(nil, 1, "Event", "concert", time.Now())
+	err := svc.Update(nil, 1, "Event", "concert", "", time.Now())
 	assert.NoError(t, err)
 	assert.True(t, events.deleted, "DeleteFields should have been called")
 	assert.True(t, rsvps.resetYes, "ResetYesRSVPs should have been called")
@@ -179,7 +182,7 @@ func TestEventService_Update_OtherToRehearsal_DeletesFields(t *testing.T) {
 	events := &stubEventRepoE{event: &models.EventDetailRow{ID: 1, EventType: "other"}}
 	svc := services.EventService{Events: events, RSVPs: rsvps}
 
-	err := svc.Update(nil, 1, "Event", "rehearsal", time.Now())
+	err := svc.Update(nil, 1, "Event", "rehearsal", "", time.Now())
 	assert.NoError(t, err)
 	assert.True(t, events.deleted, "DeleteFields should have been called")
 	assert.False(t, rsvps.resetYes, "ResetYesRSVPs should not be called")
@@ -190,7 +193,7 @@ func TestEventService_Update_ConcertToRehearsal_ClearsInstruments(t *testing.T) 
 	events := &stubEventRepoE{event: &models.EventDetailRow{ID: 1, EventType: "concert"}}
 	svc := services.EventService{Events: events, RSVPs: rsvps}
 
-	err := svc.Update(nil, 1, "Event", "rehearsal", time.Now())
+	err := svc.Update(nil, 1, "Event", "rehearsal", "", time.Now())
 	assert.NoError(t, err)
 	assert.True(t, rsvps.clearInstrument, "ClearInstruments should have been called")
 	assert.False(t, rsvps.resetYes)
@@ -201,7 +204,7 @@ func TestEventService_Update_SameType_NoSideEffects(t *testing.T) {
 	events := &stubEventRepoE{event: &models.EventDetailRow{ID: 1, EventType: "rehearsal"}}
 	svc := services.EventService{Events: events, RSVPs: rsvps}
 
-	err := svc.Update(nil, 1, "Event", "rehearsal", time.Now())
+	err := svc.Update(nil, 1, "Event", "rehearsal", "", time.Now())
 	assert.NoError(t, err)
 	assert.False(t, rsvps.resetYes)
 	assert.False(t, rsvps.clearInstrument)
@@ -213,7 +216,7 @@ func TestEventService_Update_NotFound(t *testing.T) {
 		Events: &stubEventRepoE{event: nil},
 		RSVPs:  &stubRSVPRepoE{},
 	}
-	err := svc.Update(nil, 99, "X", "concert", time.Now())
+	err := svc.Update(nil, 99, "X", "concert", "", time.Now())
 	assert.ErrorIs(t, err, services.ErrEventNotFound)
 }
 
@@ -616,4 +619,56 @@ func TestEventService_GetField_ChoiceTypeError(t *testing.T) {
 	}
 	_, err := svc.GetField(nil, 5)
 	assert.ErrorIs(t, err, repoErr)
+}
+
+// --- Description propagation ---
+
+func TestEventService_Create_PropagatesDescription(t *testing.T) {
+	events := &stubEventRepoE{eventID: 42}
+	svc := services.EventService{Events: events, RSVPs: &stubRSVPRepoE{}}
+	err := svc.Create(nil, "Concert", "concert", "**Gala** annuel", time.Now())
+	assert.NoError(t, err)
+	assert.Equal(t, "**Gala** annuel", events.capturedDescription)
+}
+
+func TestEventService_Create_EmptyDescription(t *testing.T) {
+	events := &stubEventRepoE{eventID: 42}
+	svc := services.EventService{Events: events, RSVPs: &stubRSVPRepoE{}}
+	err := svc.Create(nil, "Concert", "concert", "", time.Now())
+	assert.NoError(t, err)
+	assert.Equal(t, "", events.capturedDescription)
+}
+
+func TestEventService_Update_PropagatesDescription(t *testing.T) {
+	events := &stubEventRepoE{event: &models.EventDetailRow{ID: 1, EventType: "concert"}}
+	svc := services.EventService{Events: events, RSVPs: &stubRSVPRepoE{}}
+	err := svc.Update(nil, 1, "Concert", "concert", "Nouvelle description", time.Now())
+	assert.NoError(t, err)
+	assert.Equal(t, "Nouvelle description", events.capturedDescription)
+}
+
+func TestEventService_ListForMember_IncludesDescription(t *testing.T) {
+	events := &stubEventRepoE{
+		listRows: []models.EventListRow{
+			{ID: 1, Name: "Concert", EventType: "concert", Description: nulls.NewString("**Détails**")},
+		},
+	}
+	svc := services.EventService{Events: events, RSVPs: &stubRSVPRepoE{}}
+	dtos, err := svc.ListForMember(nil, 1)
+	assert.NoError(t, err)
+	assert.Len(t, dtos, 1)
+	assert.Equal(t, "**Détails**", dtos[0].Description)
+}
+
+func TestEventService_ListAll_NullDescriptionBecomesEmpty(t *testing.T) {
+	events := &stubEventRepoE{
+		listRows: []models.EventListRow{
+			{ID: 2, Name: "Répétition", EventType: "rehearsal"},
+		},
+	}
+	svc := services.EventService{Events: events, RSVPs: &stubRSVPRepoE{}}
+	dtos, err := svc.ListAll(nil, 1)
+	assert.NoError(t, err)
+	assert.Len(t, dtos, 1)
+	assert.Equal(t, "", dtos[0].Description)
 }

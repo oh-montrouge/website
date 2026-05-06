@@ -8,6 +8,7 @@ import (
 	"ohmontrouge/webapp/locales"
 
 	"github.com/gobuffalo/buffalo"
+	"github.com/gobuffalo/logger"
 	"github.com/gobuffalo/middleware/i18n"
 	"github.com/gobuffalo/pop/v6"
 )
@@ -17,18 +18,20 @@ import (
 // and injects a nil *pop.Connection so handlers can extract "tx" without
 // panicking. Stub repositories must not dereference the connection.
 func newTestApp(register func(*buffalo.App)) http.Handler {
-	a := buffalo.New(buffalo.Options{Env: "test"})
+	a := buffalo.New(buffalo.Options{
+		Env:    "test",
+		Logger: logger.NewLogger("fatal"),
+	})
 
-	// Templates use t() — register the translator without the production
-	// app.Stop path.
+	// Templates use t()
 	if translator, err := i18n.New(locales.FS(), "en-US"); err == nil {
 		a.Use(translator.Middleware())
 	}
 
 	a.Use(func(next buffalo.Handler) buffalo.Handler {
 		return func(c buffalo.Context) error {
-			c.Set("authenticity_token", "") // layout requires this CSRF placeholder
-			c.Set("sheet_music_url", "")    // layout requires this; tests override with injectContextValue
+			c.Set("authenticity_token", "")
+			c.Set("sheet_music_url", "")
 			c.Set("tx", (*pop.Connection)(nil))
 			return next(c)
 		}
