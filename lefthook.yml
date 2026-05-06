@@ -7,7 +7,12 @@ pre-commit:
         - meta
         - empty_output
     jscpd-templates:
-      run: jscpd webapp --min-lines 15 --gitignore --threshold 0 --format markup -s
+      run: jscpd webapp/templates --min-lines 15 --gitignore --threshold 0 -s
+      skip_output:
+        - meta
+        - empty_output
+    jscpd-e2e:
+      run: jscpd e2e/tests --min-lines 15 --gitignore --threshold 0 -s
       skip_output:
         - meta
         - empty_output
