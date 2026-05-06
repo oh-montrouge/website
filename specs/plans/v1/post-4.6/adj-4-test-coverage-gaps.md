@@ -130,7 +130,7 @@ to insert raw rows if there is no Store factory for sessions.
 
 ---
 
-## Gap 3 — `services/event.go` (30%)
+## Gap 3 — `services/event.go` (30%) ✅ Done
 
 **File:** `webapp/services/event_test.go`
 **Currently tested:** Create, Update (all 5 type-change cases), UpdateRSVP (6 cases),
